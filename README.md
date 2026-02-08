@@ -55,18 +55,4 @@ Provide original course content through referenced links.
 
 ## Roles & Interactions Flow
 
-User
-↓
-Web Interface
-↓
-Backend Services
-↓
-Database
-↓
-AI Agent
-↓
-LLM
-↓
-Course Recommendations, Roadmaps & Alerts
-↓
-User Interface
+User -> Web Interface -> Backend Services -> Database -> AI Agent -> LLM -> Course Recommendations, Roadmaps & Alerts -> User Interface
