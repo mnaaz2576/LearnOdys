@@ -56,3 +56,79 @@ Provide original course content through referenced links.
 ## Roles & Interactions Flow
 
 User -> Web Interface -> Backend Services -> Database -> AI Agent -> LLM -> Course Recommendations, Roadmaps & Alerts -> User Interface
+
+
+## Tech Stack
+
+- Frontend: React.js
+- Backend: Node.js, Express.js
+- Database: MongoDB
+- AI Integration: OpenAI API / Gemini API
+- Authentication: JWT
+- API Integration: YouTube Data API, GitHub API
+- Automation: Cron Jobs
+
+## Packages
+
+### Frontend Packages (React)
+
+- react – Build UI components (Login, Home, Dashboard, etc.)
+- react-dom – Render components in browser
+- react-router-dom – Page navigation
+- axios – Connect to backend APIs
+- react-hook-form – Handle forms (Login, Profile, Course Selection)
+
+### Backend Packages (Node.js + Express)
+
+- express – REST APIs (users, courses, roadmap, progress)
+- mongoose – MongoDB schemas & queries
+- cors – Allow frontend-backend communication
+- dotenv – Store secrets (DB URL, API keys, JWT secret)
+- bcryptjs – Encrypt user passwords
+- jsonwebtoken – User authentication (JWT)
+- node-cron – Schedule tasks (trending updates, reminders)
+- openai – AI-generated roadmap, quizzes, project suggestions, overlap detection
+
+
+- Domain & Skill-Based Course Filtering – mongoose
+- AI-Generated Personalized Learning Roadmap – openai
+- Course Selection & Progress Tracking – axios, mongoose
+- Detection of Redundant / Overlapping Content – openai
+- Quiz & Assessment Module – openai
+- Project Recommendations After Course Completion – openai
+- Alerts for Trending Courses & Updates – node-cron
+- Domain Switching with Preserved Learning History – mongoose
+
+
+## Tools
+
+### Development & Coding Tools
+
+- VS Code – Writing frontend & backend code
+- Command Prompt – Running React & Node servers
+- Node.js – JavaScript runtime environment
+- npm – Package management
+
+### Frontend Development Tools
+
+- React – Building UI components (Login, Dashboard, Learning Roadmap)
+- Web Browser (Chrome / Edge) – Testing frontend UI
+- React Router – Page navigation
+- Axios – Connect frontend to backend APIs
+- React Hook Form – Forms handling (Login, Profile, Course Selection)
+
+### Backend Development Tools
+
+- Node.js + Express.js – Backend runtime & API development
+- Postman – Testing backend APIs
+- OpenAI API – AI-generated roadmap, quizzes, project suggestions
+
+### Database Tools
+
+- MongoDB – NoSQL database
+- MongoDB Compass – Database visualization & testing
+
+### Version Control & Collaboration
+
+- Git – Version control
+- GitHub – Code hosting & collaboration  
