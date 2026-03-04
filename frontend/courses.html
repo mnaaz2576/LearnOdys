@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Course Results</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+
+
+<div class="courses-container">
+
+    <!-- LEFT FILTER -->
+    <div class="filters">
+
+        <h3>Filter by</h3>
+
+        <h4>Level</h4>
+
+        <label><input type="checkbox" class="level-filter" value="Beginner"> Beginner</label>
+        <label><input type="checkbox" class="level-filter" value="Intermediate"> Intermediate</label>
+        <label><input type="checkbox" class="level-filter" value="Advanced"> Advanced</label>
+
+        <h4>Duration</h4>
+
+        <label><input type="checkbox" class="duration-filter" value="< 30 mins"> &lt; 30 mins</label>
+        <label><input type="checkbox" class="duration-filter" value="30 - 60 mins"> 30 - 60 mins</label>
+        <label><input type="checkbox" class="duration-filter" value="1 - 2 hours"> 1 - 2 hours</label>
+        <label><input type="checkbox" class="duration-filter" value="2 - 5 hours"> 2 - 5 hours</label>
+        <label><input type="checkbox" class="duration-filter" value="5 - 10 hours"> 5 - 10 hours</label>
+
+        <h4>Platform</h4>
+
+        <label><input type="checkbox" class="platform-filter" value="Coursera"> Coursera</label>
+        <label><input type="checkbox" class="platform-filter" value="Udemy"> Udemy</label>
+        <label><input type="checkbox" class="platform-filter" value="edX"> edX</label>
+        <label><input type="checkbox" class="platform-filter" value="YouTube"> YouTube</label>
+
+    </div>
+
+
+    <!-- COURSE AREA -->
+    <div class="courses-area">
+
+        <h1>Course Results</h1>
+
+        <div id="courseContainer"></div>
+
+    </div>
+
+</div>
+
+<div id="courseContainer"></div>
+
+<script src="courses.js"></script>
+
+</body>
+</html>

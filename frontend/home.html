@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<title>LearnOdys</title>
+
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+
+<div class="navbar">
+
+<div class="logo">LearnOdys</div>
+
+<div class="nav-links">
+
+<a href="index.html" id="loginBtn">Login</a>
+
+<a href="signup.html" id="signupBtn">Sign Up</a>
+
+<div id="profileSection" style="display:none; align-items:center; gap:10px;">
+
+<span id="profileName"></span>
+
+<button onclick="logout()" class="btn-primary">Logout</button>
+
+</div>
+
+</div>
+
+</div>
+
+
+<!-- HERO SECTION -->
+
+<section class="hero">
+
+<div class="hero-left">
+
+<h1>Discover the Right Course for Your Next Step</h1>
+
+<p>
+Find courses from multiple platforms and build your learning journey.
+</p>
+
+<div class="search-box">
+
+<input
+type="text"
+id="searchInput"
+placeholder="Search courses, skills, domains..."
+onkeypress="handleEnter(event)"
+>
+
+<button onclick="searchCourse()">Search</button>
+
+</div>
+
+</div>
+
+
+<div class="hero-right">
+
+<img src="growth.png" class="hero-image">
+
+</div>
+
+</section>
+
+
+<!-- FOOTER -->
+
+<footer>
+
+<p>© 2026 LearnOdys</p>
+
+</footer>
+
+
+<script>
+
+function searchCourse(){
+
+const value = document.getElementById("searchInput").value;
+
+if(value.trim() === ""){
+alert("Please enter something to search");
+return;
+}
+
+window.location.href = "courses.html?search=" + encodeURIComponent(value);
+
+}
+
+function handleEnter(event){
+
+if(event.key === "Enter"){
+searchCourse();
+}
+
+}
+
+
+/* LOGIN CHECK */
+
+window.onload = function(){
+
+const user = localStorage.getItem("userEmail");
+
+console.log("Logged user:", user);
+
+if(user){
+
+document.getElementById("loginBtn").style.display = "none";
+
+document.getElementById("signupBtn").style.display = "none";
+
+document.getElementById("profileSection").style.display = "flex";
+
+document.getElementById("profileName").innerText = "👤 " + user;
+
+}
+
+}
+
+
+/* LOGOUT */
+
+function logout(){
+
+localStorage.removeItem("userEmail");
+
+window.location.href = "index.html";
+
+}
+
+</script>
+
+
+</body>
+</html>

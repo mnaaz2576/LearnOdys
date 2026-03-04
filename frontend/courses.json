@@ -1,0 +1,64 @@
+[
+
+
+{
+"title":"Machine Learning by Andrew Ng",
+"platform":"Coursera",
+"rating":"4.8",
+"url":"https://www.coursera.org/learn/machine-learning",
+"image":"https://miro.medium.com/max/1200/1*9U2nG9gYdExgkt1PyfuzQw.jpeg"
+},
+
+{
+"title":"Web Development Bootcamp",
+"platform":"Udemy",
+"rating":"4.7",
+"url":"https://www.udemy.com/course/the-complete-web-development-bootcamp/",
+"image":"https://img-c.udemycdn.com/course/480x270/1565838_e54e_16.jpg"
+},
+
+{
+"title":"Java Programming Masterclass",
+"platform":"Udemy",
+"rating":"4.6",
+"url":"https://www.udemy.com/course/java-the-complete-java-developer-course/",
+"image":"https://img-c.udemycdn.com/course/480x270/533682_c10c_4.jpg"
+},
+  {
+    "title": "Python for Beginners",
+    "platform": "Udemy",
+    "domain": "Programming",
+    "level": "Beginner",
+    "rating": 4.5,
+    "url": "https://www.udemy.com/course/python-for-beginners/",
+    "image": "https://img-c.udemycdn.com/course/480x270/394676_ce3d_5.jpg"
+  },
+    {
+    "title": "Full Web Development Bootcamp",
+    "platform": "Udemy",
+    "domain": "Web Development",
+    "level": "Beginner",
+    "rating": 4.7,
+    "url": "https://www.udemy.com/course/the-complete-web-development-bootcamp/",
+    "image": "https://img-c.udemycdn.com/course/480x270/1565838_e54e_16.jpg"
+  },
+
+{
+"title":"Machine Learning by Andrew Ng",
+"platform":"Coursera",
+"level":"Intermediate",
+"rating":4.8,
+"url":"https://www.coursera.org/learn/machine-learning",
+"image":"https://miro.medium.com/max/1200/1*9U2nG9gYdExgkt1PyfuzQw.jpeg"
+},
+
+{
+"title":"Data Science Specialization",
+"platform":"Coursera",
+"level":"Intermediate",
+"rating":4.6,
+"url":"https://www.coursera.org/specializations/jhu-data-science",
+"image":"https://miro.medium.com/max/1400/1*7g3M5f3A2C8p2Z1FqJ9Xdw.jpeg"
+}
+
+]
