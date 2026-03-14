@@ -1,7 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-
+const bcrypt = require("bcrypt");   // added bcrypt
 
 const User = require("./models/user");
 
@@ -29,10 +29,13 @@ app.post("/signup", async (req, res) => {
             return res.json({ message: "User already exists" });
         }
 
+        // 🔐 HASH PASSWORD BEFORE SAVING
+        const hashedPassword = await bcrypt.hash(password, 10);
+
         const newUser = new User({
             name,
             email,
-            password
+            password: hashedPassword
         });
 
         await newUser.save();
@@ -59,7 +62,10 @@ app.post("/login", async (req, res) => {
         return res.json({ message: "User not found" });
     }
 
-    if (user.password !== password) {
+    // 🔐 COMPARE HASHED PASSWORD
+    const match = await bcrypt.compare(password, user.password);
+
+    if (!match) {
         return res.json({ message: "Wrong password" });
     }
 
@@ -97,4 +103,3 @@ res.status(500).json({error:"Server Error"});
 app.listen(5000, () => {
   console.log("Server running on port 5000 🚀");
 });
-
