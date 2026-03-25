@@ -632,3 +632,16 @@ padding:6px 12px;
 border-radius:6px;
 cursor:pointer;
 }
+#courseContainer {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 👈 3 per row */
+    gap: 20px;
+    padding: 20px;
+}
+.course-card {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    text-align: center;
+}

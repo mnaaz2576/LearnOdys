@@ -8,7 +8,19 @@
 
 <body>
 
+<div class="navbar">
 
+<div class="logo">LearnOdys</div>
+
+<div class="nav-right">
+
+<span id="profileName"></span>
+
+<button onclick="logout()" class="btn-primary">Logout</button>
+
+</div>
+
+</div>
 
 <div class="courses-container">
 
@@ -30,13 +42,19 @@
         <label><input type="checkbox" class="duration-filter" value="1 - 2 hours"> 1 - 2 hours</label>
         <label><input type="checkbox" class="duration-filter" value="2 - 5 hours"> 2 - 5 hours</label>
         <label><input type="checkbox" class="duration-filter" value="5 - 10 hours"> 5 - 10 hours</label>
+        <input type="checkbox" class="duration-filter" value="20+ hours"> 20+ hours<br>
+        <input type="checkbox" class="duration-filter" value="month"> Months<br>
+        <input type="checkbox" class="duration-filter" value="week"> Weeks<br>
 
         <h4>Platform</h4>
 
-        <label><input type="checkbox" class="platform-filter" value="Coursera"> Coursera</label>
-        <label><input type="checkbox" class="platform-filter" value="Udemy"> Udemy</label>
-        <label><input type="checkbox" class="platform-filter" value="edX"> edX</label>
-        <label><input type="checkbox" class="platform-filter" value="YouTube"> YouTube</label>
+        <input type="checkbox" class="platform-filter" value="Coursera"> Coursera<br>
+        <input type="checkbox" class="platform-filter" value="Udemy"> Udemy<br>
+        <input type="checkbox" class="platform-filter" value="edX"> edX<br>
+        <input type="checkbox" class="platform-filter" value="YouTube"> YouTube<br>
+        <input type="checkbox" class="platform-filter" value="Udacity"> Udacity<br>
+        <input type="checkbox" class="platform-filter" value="FutureLearn"> FutureLearn<br>
+        <input type="checkbox" class="platform-filter" value="Simplilearn"> Simplilearn<br>
 
     </div>
 
@@ -56,5 +74,22 @@
 
 <script src="courses.js"></script>
 
+<script>
+
+const user = localStorage.getItem("userEmail")
+
+if(user){
+document.getElementById("profileName").innerText = "👤 " + user
+}
+
+function logout(){
+
+localStorage.removeItem("userEmail")
+
+window.location.href = "index.html"
+
+}
+
+</script>
 </body>
 </html>
