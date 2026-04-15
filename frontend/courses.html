@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Course Results</title>
+<link rel="stylesheet" href="style.css">
+
+<style>
+/* 🔽 PROFILE DROPDOWN */
+.profile-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.profile-trigger {
+  cursor: pointer;
+  padding: 6px 10px;
+  background: #f1f1f1;
+  border-radius: 6px;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 40px;
+  background: white;
+  min-width: 150px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  z-index: 1000;
+}
+
+.dropdown-menu a {
+  display: block;
+  padding: 10px;
+  text-decoration: none;
+  color: #333;
+}
+
+.dropdown-menu a:hover {
+  background: #f5f5f5;
+}
+</style>
+
+</head>
+
+<body class="courses-page-ui">
+
+<!-- 🔥 NAVBAR -->
+<div class="navbar">
+
+  <div class="logo">LearnOdys</div>
+
+  <div class="nav-links">
+
+    <!-- 🔍 SEARCH BAR -->
+    <div class="search-box-nav">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="navSearch" placeholder="Search courses...">
+      <button onclick="navSearch()">Search</button>
+    </div>
+
+    <!-- 👤 PROFILE DROPDOWN -->
+    <div class="profile-dropdown">
+
+      <div class="profile-trigger" onclick="toggleDropdown()">
+        👤 <span id="profileName"></span> ⬇
+      </div>
+
+      <div class="dropdown-menu" id="dropdownMenu">
+        <a href="dash.html">Dashboard</a>
+        <a href="#">My Courses</a>
+        <a href="#" onclick="logout()">Logout</a>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<div class="courses-container">
+
+    <!-- LEFT FILTER -->
+    <div class="filters">
+
+        <!-- 🔥 HEADER WITH ICON -->
+        <div class="filter-header">
+            <span class="filter-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2">
+                    <line x1="4" y1="6" x2="20" y2="6"/>
+                    <circle cx="10" cy="6" r="2"/>
+                    <line x1="4" y1="12" x2="20" y2="12"/>
+                    <circle cx="14" cy="12" r="2"/>
+                    <line x1="4" y1="18" x2="20" y2="18"/>
+                    <circle cx="8" cy="18" r="2"/>
+                </svg>
+            </span>
+            <h3>Filter by</h3>
+        </div>
+
+        <!-- 📦 FILTER BOX -->
+        <div class="filter-box">
+
+            <h4>Level</h4>
+            <label><input type="checkbox" class="level-filter" value="Beginner"> Beginner</label>
+            <label><input type="checkbox" class="level-filter" value="Intermediate"> Intermediate</label>
+            <label><input type="checkbox" class="level-filter" value="Advanced"> Advanced</label>
+
+            <h4>Duration</h4>
+            <label><input type="checkbox" class="duration-filter" value="< 30 mins"> &lt; 30 mins</label>
+            <label><input type="checkbox" class="duration-filter" value="30 - 60 mins"> 30 - 60 mins</label>
+            <label><input type="checkbox" class="duration-filter" value="1 - 2 hours"> 1 - 2 hours</label>
+            <label><input type="checkbox" class="duration-filter" value="2 - 5 hours"> 2 - 5 hours</label>
+            <label><input type="checkbox" class="duration-filter" value="5 - 10 hours"> 5 - 10 hours</label>
+            <label><input type="checkbox" class="duration-filter" value="20+ hours"> 20+ hours</label>
+            <label><input type="checkbox" class="duration-filter" value="month"> Months</label>
+            <label><input type="checkbox" class="duration-filter" value="week"> Weeks</label>
+
+            <h4>Platform</h4>
+            <label><input type="checkbox" class="platform-filter" value="Coursera"> Coursera</label>
+            <label><input type="checkbox" class="platform-filter" value="Udemy"> Udemy</label>
+            <label><input type="checkbox" class="platform-filter" value="edX"> edX</label>
+            <label><input type="checkbox" class="platform-filter" value="YouTube"> YouTube</label>
+            <label><input type="checkbox" class="platform-filter" value="Udacity"> Udacity</label>
+            <label><input type="checkbox" class="platform-filter" value="FutureLearn"> FutureLearn</label>
+            <label><input type="checkbox" class="platform-filter" value="Simplilearn"> Simplilearn</label>
+
+        </div>
+
+    </div>
+
+
+    <!-- COURSE AREA -->
+    <div class="courses-area">
+
+        <div class="courses-page-header">
+            <h1>Course Results</h1>
+            <p>Explore curated learning options, compare levels, and open the best course for your next step.</p>
+        </div>
+
+        <button id="advisorFab" class="advisor-fab" onclick="toggleAdvisorWidget()">🤖 AI Help</button>
+
+        <div id="advisorWidget" class="course-ai-helper">
+            <div class="helper-header-row">
+                <div>
+                    <h3>🤖 AI Course Guide</h3>
+                    <p>Quick help for roadmap, issues, and course overlap.</p>
+                </div>
+                <div class="helper-header-actions">
+                    <button class="helper-roadmap-btn" onclick="generateCourseRoadmap()">Roadmap</button>
+                    <button class="helper-close-btn" onclick="toggleAdvisorWidget(false)">✕</button>
+                </div>
+            </div>
+
+            <div id="advisorSelectedCourses" class="selected-course-tags"></div>
+            <div id="advisorAlert" class="advisor-alert" style="display:none;"></div>
+            <div id="advisorOutput" class="advisor-output">Select up to 2 courses for comparison, then ask the AI which one fits better or what to study next.</div>
+
+            <div class="advisor-controls">
+                <input type="text" id="advisorInput" placeholder="Which course should I start with?" onkeypress="handleAdvisorEnter(event)">
+                <button class="advisor-ask-btn" onclick="askCourseAdvisor()">Ask</button>
+            </div>
+        </div>
+
+        <div id="courseContainer"></div>
+
+    </div>
+
+</div>
+
+
+<script src="courses.js"></script>
+
+<script>
+
+// 👤 SHOW USER
+const user = localStorage.getItem("userEmail")
+
+if(user){
+    document.getElementById("profileName").innerText = user
+}
+
+// 🔓 LOGOUT
+function logout(){
+    localStorage.removeItem("userEmail")
+    window.location.href = "index.html"
+}
+
+// 🔍 NAV SEARCH FUNCTION
+function navSearch(){
+    const value = document.getElementById("navSearch").value
+    if(value.trim() !== ""){
+        window.location.href = "courses.html?search=" + value
+    }
+}
+
+// ⌨️ ENTER KEY SUPPORT
+document.getElementById("navSearch").addEventListener("keypress", function(e){
+    if(e.key === "Enter"){
+        navSearch()
+    }
+})
+
+// 🔽 DROPDOWN TOGGLE
+function toggleDropdown() {
+  const menu = document.getElementById("dropdownMenu");
+  menu.style.display = menu.style.display === "block" ? "none" : "block";
+}
+
+// ❌ CLOSE ON OUTSIDE CLICK
+window.onclick = function(e) {
+  if (!e.target.closest(".profile-dropdown")) {
+    document.getElementById("dropdownMenu").style.display = "none";
+  }
+}
+
+const params = new URLSearchParams(window.location.search)
+const search = params.get("search")
+
+if(search){
+    document.getElementById("navSearch").value = search
+}
+
+
+
+</script>
+<div id="miniPanel" class="mini-panel">
+    <div class="panel-header">
+        <div>
+            <strong>📱 My Course List</strong>
+            <small>Saved for your account</small>
+        </div>
+        <button class="panel-close-btn" onclick="closePanel()">✖</button>
+    </div>
+
+    <div id="listItems" class="list-items-wrap"></div>
+</div>
+<div id="appToast" class="app-toast"></div>
+<style>
+.mini-panel {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    width: 320px;
+    min-height: 420px;
+    max-height: 520px;
+    background: linear-gradient(180deg, #fbfdff 0%, #f2f7ff 100%);
+    border: 1px solid #d6e2f5;
+    box-shadow: 0 22px 50px rgba(15, 23, 42, 0.22);
+    padding: 14px;
+    display: none;
+    border-radius: 28px;
+    overflow: hidden;
+    z-index: 1000;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+    color: #1f2d3d;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e4ebf6;
+}
+
+.panel-header strong {
+    display: block;
+    font-size: 16px;
+    margin-bottom: 2px;
+}
+
+.panel-header small {
+    color: #6b7280;
+    font-size: 12px;
+}
+
+.panel-close-btn {
+    border: none;
+    background: #eef4ff;
+    color: #3152db;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.panel-close-btn:hover {
+    background: #dfe9ff;
+}
+
+.list-items-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 430px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    background: #fff;
+    border: 1px solid #e4ebf5;
+    border-radius: 16px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+}
+
+.list-item.empty {
+    min-height: 120px;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.list-main {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+}
+
+.list-main strong {
+    color: #1f2d3d;
+    font-size: 14px;
+    line-height: 1.35;
+}
+
+.list-main small {
+    color: #6b7280;
+    font-size: 12px;
+}
+
+.remove-list-btn {
+    border: none;
+    background: #ffe8ea;
+    color: #c62839;
+    min-width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.remove-list-btn:hover {
+    background: #ffd7dc;
+}
+
+.advisor-fab {
+    position: fixed;
+    left: 22px;
+    bottom: 22px;
+    z-index: 1101;
+    border: none;
+    border-radius: 999px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #3152db 0%, #4f7cff 100%);
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 16px 32px rgba(49, 82, 219, 0.28);
+    cursor: pointer;
+}
+
+.course-ai-helper {
+    position: fixed;
+    left: 22px;
+    bottom: 78px;
+    width: 340px;
+    max-width: calc(100vw - 32px);
+    padding: 14px;
+    border-radius: 18px;
+    border: 1px solid #dbe6f6;
+    background: linear-gradient(135deg, #f8fbff 0%, #eef4ff 100%);
+    box-shadow: 0 16px 34px rgba(37, 99, 235, 0.16);
+    z-index: 1100;
+    display: none;
+}
+
+.helper-header-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.helper-header-row h3 {
+    margin: 0 0 4px;
+    color: #1f2d3d;
+    font-size: 16px;
+}
+
+.helper-header-row p {
+    margin: 0;
+    color: #526173;
+    font-size: 12px;
+}
+
+.helper-header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.helper-roadmap-btn,
+.advisor-ask-btn,
+.helper-close-btn {
+    border: none;
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.helper-roadmap-btn {
+    background: #3152db;
+    color: white;
+}
+
+.helper-close-btn {
+    background: #e7efff;
+    color: #2449d8;
+    width: 36px;
+    padding: 9px 0;
+}
+
+.advisor-ask-btn {
+    background: #e7efff;
+    color: #2449d8;
+}
+
+.selected-course-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0;
+}
+
+.selected-course-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid #cddcff;
+    font-size: 13px;
+    color: #1f2d3d;
+}
+
+.selected-course-chip button {
+    border: none;
+    background: transparent;
+    color: #3152db;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.selected-course-chip.empty {
+    color: #64748b;
+}
+
+.advisor-alert {
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    color: #9a3412;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+.advisor-output {
+    background: #fff;
+    border: 1px solid #dbe4f0;
+    border-radius: 12px;
+    padding: 12px;
+    min-height: 64px;
+    color: #334155;
+    line-height: 1.55;
+}
+
+.advisor-line + .advisor-line {
+    margin-top: 8px;
+}
+
+.advisor-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.advisor-controls input {
+    flex: 1;
+    border: 1px solid #cfd9ea;
+    border-radius: 10px;
+    padding: 11px 12px;
+}
+
+.btn-select {
+    background: #f8fafc;
+    color: #3152db;
+    border: 1px solid #cddcff;
+}
+
+.btn-select.selected {
+    background: #3152db;
+    color: #fff;
+    border-color: #3152db;
+}
+
+.app-toast {
+    position: fixed;
+    top: 84px;
+    right: 24px;
+    z-index: 1200;
+    min-width: 240px;
+    max-width: 340px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.18);
+    display: none;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.app-toast.show {
+    display: block;
+}
+
+.app-toast.success {
+    background: #ecfdf5;
+    color: #166534;
+    border: 1px solid #86efac;
+}
+
+.app-toast.info {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.app-toast.warn {
+    background: #fff7ed;
+    color: #9a3412;
+    border: 1px solid #fdba74;
+}
+
+@media (max-width: 700px) {
+    .course-ai-helper {
+        left: 12px;
+        right: 12px;
+        bottom: 74px;
+        width: auto;
+    }
+
+    .helper-header-row,
+    .advisor-controls {
+        flex-direction: column;
+    }
+
+    .helper-roadmap-btn,
+    .advisor-ask-btn {
+        width: 100%;
+    }
+
+    .advisor-fab {
+        left: 12px;
+        bottom: 12px;
+    }
+}
+</style>
+</body>
+</html>

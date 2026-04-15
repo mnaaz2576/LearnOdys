@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<title>LearnOdys</title>
+
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body class="home-page">
+
+<!-- NAVBAR -->
+
+<div class="navbar">
+
+<div class="logo">LearnOdys</div>
+
+<div class="nav-links">
+
+<a href="index.html" id="loginBtn">Login</a>
+
+<a href="signup.html" id="signupBtn">Sign Up</a>
+
+<!-- PROFILE -->
+<div id="profileSection" style="display:none; position:relative;">
+
+  <div onclick="toggleMenu()" style="cursor:pointer; font-size:20px;">
+    👤
+  </div>
+
+  <div id="menu" style="display:none; position:absolute; right:0; top:30px; background:white; padding:10px; box-shadow:0 0 10px rgba(0,0,0,0.2);">
+
+    <p id="profileName"></p>
+
+    <a href="dash.html">Dashboard</a><br>
+    <a href="list.html">My List</a><br>
+
+    <button onclick="logout()">Logout</button>
+
+  </div>
+
+</div>
+
+</div>
+
+</div>
+
+
+<!-- HERO SECTION - ASYMMETRICAL -->
+
+<section class="hero-asymmetric">
+
+<div class="hero-content">
+
+<div class="hero-text">
+<h1>Find Your Perfect Learning Path</h1>
+<p>AI-powered course discovery tailored to your goals. Ask anything about learning!</p>
+</div>
+
+<div class="ai-mentor-inline">
+<h3>🤖 AI Mentor Chat</h3>
+<div class="chat-container-inline">
+<div id="chatMessages" class="chat-messages"></div>
+<div class="chat-input-inline">
+<input type="text" id="aiQuestion" placeholder="What do you want to learn?" onkeypress="handleChatEnter(event)">
+<button onclick="askAI()">Ask</button>
+</div>
+</div>
+</div>
+
+</div>
+
+<div class="hero-image-section">
+<img src="growth.png" class="hero-image" alt="Learning Journey">
+</div>
+
+</section>
+
+
+<!-- FOOTER -->
+
+<footer>
+<p>© 2026 LearnOdys</p>
+</footer>
+
+<script src="home.js"></script>
+
+</body>
+</html>

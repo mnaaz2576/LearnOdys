@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<title>Login - LearnOdys</title>
+
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+
+<body class="auth-body">
+
+
+<div class="auth-container">
+
+<!-- LEFT SIDE -->
+<div class="auth-left">
+
+<h1>Welcome Back</h1>
+
+<p>Continue your personalized learning journey with LearnOdys.</p>
+
+</div>
+
+
+<!-- RIGHT SIDE -->
+<div class="auth-right">
+
+<div class="auth-box">
+
+<h2>Login</h2>
+
+
+<form id="loginForm">
+
+<div class="input-group">
+
+<input type="email" id="loginEmail" required>
+
+<label>Email</label>
+
+</div>
+
+
+<div class="input-group">
+
+<input type="password" id="loginPassword" required>
+
+<label>Password</label>
+
+</div>
+
+
+<p id="loginMessage" class="error-msg"></p>
+
+
+<button type="submit" class="btn-primary full-btn">
+
+Login
+
+</button>
+
+
+</form>
+
+
+<p class="switch-text">
+
+Don't have an account?
+
+<a href="signup.html">Sign Up</a>
+
+</p>
+
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<script>
+
+
+
+document.getElementById("loginForm").addEventListener("submit", async function(e){
+
+e.preventDefault();
+
+const email = document.getElementById("loginEmail").value.trim();
+const password = document.getElementById("loginPassword").value.trim();
+const message = document.getElementById("loginMessage");
+
+message.innerText = "";
+
+try{
+
+const res = await fetch("http://localhost:5000/login",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({email,password})
+});
+
+const data = await res.json();
+
+console.log(data);
+
+if(data.message !== "Login successful"){
+message.style.color="red";
+message.innerText=data.message || "Login failed";
+return;
+}
+
+/* SAVE USER */
+localStorage.setItem("userEmail", data.email || email);
+localStorage.setItem("userName", data.name || email.split("@")[0]);
+
+/* SHOW MESSAGE */
+message.style.color="green";
+message.innerText="Login successful";
+
+/* REDIRECT */
+window.location.href="home.html";
+
+}
+
+catch(error){
+
+message.style.color="red";
+message.innerText="Server not reachable";
+
+}
+
+});
+
+
+
+</script>
+
+
+</body>
+</html>

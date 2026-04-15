@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+<title>Sign Up - LearnOdys</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body class="auth-body">
+
+<div class="auth-container">
+
+<div class="auth-left">
+<h1>Start Your Journey</h1>
+<p>Create an account and design your personalized learning roadmap.</p>
+</div>
+
+<div class="auth-right">
+<div class="auth-box">
+
+<h2>Sign Up</h2>
+
+<form onsubmit="signup(event)">
+
+<div class="input-group">
+<input type="text" id="name" required>
+<label>Full Name</label>
+</div>
+
+<div class="input-group">
+<input type="email" id="email" required>
+<label>Email</label>
+</div>
+
+<div class="input-group">
+<input type="password" id="password" required onkeyup="checkStrength()">
+<label>Password</label>
+</div>
+
+<p id="strengthMessage"></p>
+
+<div class="input-group">
+<input type="password" id="confirmPassword" required>
+<label>Confirm Password</label>
+</div>
+
+<p id="signupMessage" class="error-msg"></p>
+
+<!-- ✅ FIXED BUTTON -->
+<button type="submit" class="btn-primary full-btn">
+Register
+</button>
+
+</form>
+
+<p class="switch-text">
+Already have an account?
+<a href="index.html">Login</a>
+</p>
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+/* PASSWORD STRENGTH CHECK */
+
+function checkStrength(){
+
+const password=document.getElementById("password").value;
+const strengthMessage=document.getElementById("strengthMessage");
+
+let strength="Weak";
+
+if(password.length>=6){
+strength="Medium";
+}
+
+if(
+password.match(/[A-Z]/) &&
+password.match(/[0-9]/) &&
+password.match(/[^A-Za-z0-9]/) &&
+password.length>=8
+){
+strength="Strong";
+}
+
+strengthMessage.innerText="Password Strength: "+strength;
+
+if(strength==="Weak") strengthMessage.style.color="red";
+if(strength==="Medium") strengthMessage.style.color="orange";
+if(strength==="Strong") strengthMessage.style.color="green";
+
+}
+
+
+
+/* SIGNUP FUNCTION */
+
+async function signup(event){
+
+event.preventDefault();
+
+const name=document.getElementById("name").value.trim();
+const email=document.getElementById("email").value.trim();
+const password=document.getElementById("password").value.trim();
+const confirmPassword=document.getElementById("confirmPassword").value.trim();
+
+const message=document.getElementById("signupMessage");
+
+message.innerText="";
+
+
+/* PASSWORD SHOULD NOT CONTAIN USERNAME */
+
+const usernameParts=name.toLowerCase().split(" ");
+
+for(let part of usernameParts){
+
+if(part.length>2 && password.toLowerCase().includes(part)){
+message.innerText="Password should not contain your name";
+return;
+}
+
+}
+
+
+/* PASSWORD MUST HAVE SPECIAL CHARACTER */
+
+if(!password.match(/[^A-Za-z0-9]/)){
+message.innerText="Password must contain at least one special character";
+return;
+}
+
+
+/* CONFIRM PASSWORD CHECK */
+
+if(password!==confirmPassword){
+message.innerText="Passwords do not match";
+return;
+}
+
+
+/* SEND DATA TO BACKEND */ 
+
+try{
+
+const res = await fetch("http://localhost:5000/signup",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({name,email,password})
+});
+
+const data=await res.json();
+
+if(data.message !== "Signup successful"){
+message.style.color="red";
+message.innerText=data.message || "Signup failed";
+return;
+}
+
+/* ✅ SAVE USER */
+localStorage.setItem("userName", data.name || name);
+localStorage.setItem("userEmail", data.email || email);
+
+/* ✅ SUCCESS MESSAGE */
+message.style.color="green";
+message.innerText="Signup successful";
+
+/* ✅ REDIRECT TO HOME */
+setTimeout(()=>{
+window.location.href="home.html";
+},1000);
+
+}catch(err){
+
+message.style.color="red";
+message.innerText="Cannot connect to backend";
+
+}
+
+}
+
+</script>
+
+</body>
+</html>

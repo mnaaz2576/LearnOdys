@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Dashboard</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+body{
+  margin:0;
+  font-family:'Poppins', sans-serif;
+  background:#f6f7fb;
+}
+
+.navbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 40px;
+  background:white;
+  border-bottom:1px solid #ddd;
+}
+
+.logo{ font-weight:600; }
+
+.search{
+  width:400px;
+  padding:10px;
+  border-radius:25px;
+  border:1px solid #ddd;
+}
+
+.profile-section{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.btn{
+  padding:6px 12px;
+  background:#2563eb;
+  color:white;
+  border:none;
+  border-radius:5px;
+  cursor:pointer;
+}
+
+.container{
+  display:flex;
+  padding:30px;
+  gap:30px;
+}
+
+.left{
+  width:280px;
+  background:white;
+  padding:20px;
+  border-radius:10px;
+  text-align:center;
+}
+
+.avatar{
+  width:80px;
+  height:80px;
+  background:#ff4d7d;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:white;
+  font-size:30px;
+  margin:auto;
+}
+
+.right{ flex:1; }
+
+.tabs{
+  display:flex;
+  gap:10px;
+  margin-bottom:15px;
+}
+
+.tab{
+  padding:8px 15px;
+  background:#eee;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.active{
+  background:#2563eb;
+  color:white;
+}
+
+.box{
+  background:white;
+  padding:25px;
+  border-radius:10px;
+}
+
+.course{
+  padding:10px;
+  border-bottom:1px solid #ddd;
+  margin-bottom:10px;
+}
+
+.add-btn{
+  margin-top:10px;
+  padding:8px 12px;
+  border-radius:20px;
+  cursor:pointer;
+}
+
+.inline-inputs{
+  display:flex;
+  gap:10px;
+  margin-bottom:15px;
+}
+
+.inline-inputs input[type=text]{
+  flex:1;
+  padding:8px;
+}
+
+.inline-inputs input[type=number]{
+  width:80px;
+  padding:8px;
+}
+
+.inline-inputs button{
+  padding:8px 12px;
+}
+
+.hidden{
+  display:none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="navbar">
+  <div class="logo">LearnOdys</div>
+  <input class="search" placeholder="Search courses...">
+  <div class="profile-section">
+    <span id="username"></span>
+    <button class="btn" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="left">
+    <div class="avatar">S</div>
+    <h3 id="usernameLeft"></h3>
+    <button class="btn" onclick="showEdit()">Edit profile</button>
+
+    <div id="editBox" style="display:none; margin-top:10px;">
+      <input type="text" id="editInput" placeholder="Enter name" style="padding:8px; width:90%;"><br><br>
+      <button class="btn" onclick="saveProfile()">Save</button>
+      <button class="btn" onclick="cancelEdit()" style="background:gray;">Cancel</button>
+    </div>
+  </div>
+
+  <div class="right">
+
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('profile')">Profile</div>
+      <div class="tab" onclick="showTab('list')">Lists</div>
+    </div>
+
+    <div id="profileTab" class="box">
+      <h3>Your Courses / Prerequisites</h3>
+
+      <!-- ADD -->
+      <div class="inline-inputs">
+        <input type="text" id="newCourseName" placeholder="Course Name">
+        <input type="number" id="newCourseLevel" placeholder="Level 0-100" min="0" max="100">
+        <button onclick="addCourse()">Add</button>
+      </div>
+
+      <!-- FILTER -->
+      <div style="margin-bottom:15px;">
+        <button onclick="filterCourses('all')" class="btn add-btn">All</button>
+        <button onclick="filterCourses('strong')" class="btn add-btn">💪 Strong</button>
+        <button onclick="filterCourses('learning')" class="btn add-btn">📘 Learning</button>
+        <button onclick="filterCourses('weak')" class="btn add-btn">🔁 Revise</button>
+      </div>
+
+      <div id="courseList"></div>
+
+      <!-- AI Integration Section -->
+      <h3 style="margin-top:20px;">AI Tools</h3>
+
+      <div style="margin-bottom:15px;">
+        <button class="btn add-btn" id="genRoadmapBtn">Generate Roadmap</button>
+        <div id="roadmapOutput" style="background:#f8fafc; padding:10px; border-radius:8px; min-height:40px;"></div>
+      </div>
+
+      <div style="margin-bottom:15px;">
+        <button class="btn add-btn" id="genQuizBtn">Generate Quiz</button>
+        <div id="quizOutput" style="background:#f0f0f0; padding:10px; border-radius:6px; min-height:40px;"></div>
+      </div>
+
+      <div style="margin-bottom:15px;">
+        <button class="btn add-btn" id="genProjectBtn">Suggest Projects</button>
+        <div id="projectsOutput" style="background:#f8fafc; padding:10px; border-radius:8px; min-height:40px;"></div>
+      </div>
+
+    </div>
+
+    <div id="listTab" class="box hidden">
+      <h3>Your Lists</h3>
+      <p>No lists yet 😅</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const userEmail = localStorage.getItem("userEmail") || "";
+const user = localStorage.getItem("userName") || userEmail || "User";
+const storageKey = `courses_${(userEmail || "guest").toLowerCase()}`;
+document.getElementById("username").innerText = "👤 " + user;
+document.getElementById("usernameLeft").innerText = user;
+
+let currentFilter = "all";
+let dashboardCourseCache = [];
+let todayQuizState = null;
+
+async function getSavedCourses(forceRefresh = false) {
+  const scopedCourses = JSON.parse(localStorage.getItem(storageKey) || "null");
+
+  if (!forceRefresh && Array.isArray(scopedCourses)) {
+    return scopedCourses;
+  }
+
+  if (userEmail) {
+    try {
+      const res = await fetch(`http://localhost:5000/dash?userEmail=${encodeURIComponent(userEmail)}`);
+      if (res.ok) {
+        const backendCourses = await res.json();
+        if (Array.isArray(backendCourses)) {
+          const shouldUseBackend = backendCourses.length > 0 || !Array.isArray(scopedCourses) || scopedCourses.length === 0;
+          if (shouldUseBackend) {
+            localStorage.setItem(storageKey, JSON.stringify(backendCourses));
+            localStorage.setItem("courses", JSON.stringify(backendCourses));
+            return backendCourses;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error loading user courses from backend:", err);
+    }
+  }
+
+  if (Array.isArray(scopedCourses)) return scopedCourses;
+
+  const legacyCourses = JSON.parse(localStorage.getItem("courses") || "[]");
+  if (legacyCourses.length) {
+    localStorage.setItem(storageKey, JSON.stringify(legacyCourses));
+    return legacyCourses;
+  }
+
+  return [];
+}
+
+function setSavedCourses(courses) {
+  localStorage.setItem(storageKey, JSON.stringify(courses));
+  localStorage.setItem("courses", JSON.stringify(courses));
+}
+
+function getDefaultDueDate(days = 14) {
+  const date = new Date();
+  date.setDate(date.getDate() + Math.max(1, Number(days) || 14));
+  return date.toISOString();
+}
+
+function formatDueDate(value) {
+  if (!value) return "Not set";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not set";
+  return date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}
+
+function getReminderGapDays(frequency) {
+  if (frequency === "twodays") return 2;
+  if (frequency === "weekly") return 7;
+  return 1;
+}
+
+function getReminderLabel(frequency) {
+  if (frequency === "twodays") return "Every 2 days";
+  if (frequency === "weekly") return "Weekly";
+  return "Daily";
+}
+
+function getTodayStamp() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function normalizeDashboardCourse(course) {
+  const title = course.title || course.name || "Untitled Course";
+  const levelMap = { beginner: 25, intermediate: 60, advanced: 85 };
+
+  let level = typeof course.level === "number" ? course.level : parseInt(course.level, 10);
+  if (isNaN(level)) {
+    level = levelMap[String(course.level || "").toLowerCase()] ?? 50;
+  }
+
+  let targetDays = parseInt(course.targetDays, 10);
+  if (isNaN(targetDays) || targetDays <= 0) {
+    targetDays = 14;
+  }
+
+  return {
+    ...course,
+    name: title,
+    title,
+    level,
+    targetDays,
+    dueDate: course.dueDate || getDefaultDueDate(targetDays),
+    reminderEnabled: course.reminderEnabled !== false,
+    reminderFrequency: course.reminderFrequency || "daily",
+    reminderTime: course.reminderTime || "19:00",
+    lastReminderDate: course.lastReminderDate || "",
+    lastQuizDate: course.lastQuizDate || "",
+    lastQuizScore: typeof course.lastQuizScore === "number" ? course.lastQuizScore : null
+  };
+}
+
+async function loadCourses(forceRefresh = false){
+  let courses = await getSavedCourses(forceRefresh);
+  courses = courses
+    .map(normalizeDashboardCourse)
+    .filter(c => !c.userEmail || c.userEmail === userEmail);
+  dashboardCourseCache = courses;
+  setSavedCourses(courses);
+
+  const list = document.getElementById("courseList");
+  const savedListBox = document.getElementById("listTab");
+  list.innerHTML = "";
+
+  let filtered = courses.filter(c => {
+    if(currentFilter === "strong") return c.level >= 70;
+    if(currentFilter === "learning") return c.level >= 30 && c.level < 70;
+    if(currentFilter === "weak") return c.level < 30;
+    return true;
+  });
+
+  if (!filtered.length) {
+    list.innerHTML = `<p>No saved courses yet. Add courses from the course cards to see them here.</p>`;
+    savedListBox.innerHTML = `<h3>Your Lists</h3><p>No lists yet 😅</p>`;
+    return;
+  }
+
+  savedListBox.innerHTML = `
+    <h3>Your Lists</h3>
+    <div id="dailyQuizWidget" style="margin-bottom:16px;"></div>
+    <div id="dashboardReminderPopup" style="display:none; margin-bottom:14px; padding:12px; border-radius:10px; background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8;"></div>
+    ${courses.map((c, index) => `
+      <div class="course" style="border:1px solid #e5e7eb; border-radius:12px; padding:14px; margin-bottom:12px;">
+        <strong>${c.title}</strong><br>
+        <small>${c.platform || "Online"} • ${c.level}% complete • Finish by <strong>${formatDueDate(c.dueDate)}</strong></small>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; align-items:center;">
+          <label>Plan days
+            <input type="number" min="1" max="120" id="targetDays${index}" value="${c.targetDays}" style="width:74px; padding:6px; margin-left:6px;">
+          </label>
+          <label>Reminder
+            <select id="reminderFrequency${index}" style="padding:6px; margin-left:6px;">
+              <option value="daily" ${c.reminderFrequency === "daily" ? "selected" : ""}>Daily</option>
+              <option value="twodays" ${c.reminderFrequency === "twodays" ? "selected" : ""}>Every 2 days</option>
+              <option value="weekly" ${c.reminderFrequency === "weekly" ? "selected" : ""}>Weekly</option>
+            </select>
+          </label>
+          <label>Time
+            <input type="time" id="reminderTime${index}" value="${c.reminderTime || "19:00"}" style="padding:6px; margin-left:6px;">
+          </label>
+          <button class="btn add-btn" onclick="saveTimelinePlan(${index})">Save plan</button>
+        </div>
+        <div style="margin-top:8px; color:#475569; font-size:13px;">Reminder cadence: ${getReminderLabel(c.reminderFrequency)} at ${c.reminderTime || "19:00"}</div>
+      </div>
+    `).join("")}
+  `;
+
+  renderDailyQuizWidget(courses);
+  checkReminderAlerts(courses);
+
+  filtered.forEach((c, filteredIndex) => {
+    const originalIndex = courses.findIndex(item => item.title === c.title && item.userEmail === c.userEmail);
+
+    list.innerHTML += `
+      <div class="course">
+        <strong>${c.title}</strong><br>
+        <small>${c.platform || "Online"} • ${c.duration || "Self-paced"}</small><br><br>
+
+        Level:
+        <input type="range" min="0" max="100" value="${c.level}"
+        oninput="previewLevel(${originalIndex}, this.value)"
+        onchange="updateLevel(${originalIndex}, this.value)">
+
+        <span id="level${originalIndex}">${c.level}</span>%
+
+        <span id="status${originalIndex}" style="margin-left:10px;">
+          ${getLevelStatus(c.level)}
+        </span>
+
+        <button onclick="deleteCourse(${originalIndex})" style="float:right;">❌</button>
+      </div>
+    `;
+  });
+}
+
+function getLevelStatus(level) {
+  return level >= 70 ? "💪 Strong" : level >= 30 ? "📘 Learning" : "🔁 Revise";
+}
+
+function previewLevel(index, val){
+  const parsed = parseInt(val, 10);
+  const levelSpan = document.getElementById(`level${index}`);
+  const statusSpan = document.getElementById(`status${index}`);
+
+  if(levelSpan) levelSpan.innerText = parsed;
+  if(statusSpan) statusSpan.innerText = getLevelStatus(parsed);
+}
+
+function showDashboardPopup(message, tone = "info") {
+  const popup = document.getElementById("dashboardReminderPopup");
+  if (!popup) return;
+
+  const styles = {
+    info: { bg: "#eff6ff", border: "#bfdbfe", color: "#1d4ed8" },
+    success: { bg: "#ecfdf5", border: "#86efac", color: "#166534" },
+    warn: { bg: "#fff7ed", border: "#fdba74", color: "#9a3412" }
+  };
+
+  const palette = styles[tone] || styles.info;
+  popup.style.display = "block";
+  popup.style.background = palette.bg;
+  popup.style.border = `1px solid ${palette.border}`;
+  popup.style.color = palette.color;
+  popup.innerHTML = message;
+}
+
+async function saveTimelinePlan(index) {
+  const course = dashboardCourseCache[index];
+  if (!course) return;
+
+  const targetDays = Math.max(1, parseInt(document.getElementById(`targetDays${index}`)?.value, 10) || 14);
+  const reminderFrequency = document.getElementById(`reminderFrequency${index}`)?.value || "daily";
+  const reminderTime = document.getElementById(`reminderTime${index}`)?.value || "19:00";
+  const dueDate = getDefaultDueDate(targetDays);
+
+  Object.assign(course, {
+    targetDays,
+    dueDate,
+    reminderEnabled: true,
+    reminderFrequency,
+    reminderTime
+  });
+
+  setSavedCourses(dashboardCourseCache);
+
+  try {
+    await fetch("http://localhost:5000/dash", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        courseId: course._id || "",
+        userEmail: course.userEmail || userEmail || "guest",
+        title: course.title,
+        targetDays,
+        dueDate,
+        reminderEnabled: true,
+        reminderFrequency,
+        reminderTime
+      })
+    });
+    showDashboardPopup(`⏳ <strong>${course.title}</strong> is now planned to finish by <strong>${formatDueDate(dueDate)}</strong>. Reminders are set for ${getReminderLabel(reminderFrequency).toLowerCase()} at ${reminderTime}.`, "success");
+  } catch (err) {
+    console.error("Error saving timeline plan:", err);
+    showDashboardPopup(`Saved locally for <strong>${course.title}</strong>. Backend sync will retry when available.`, "warn");
+  }
+
+  loadCourses(false);
+}
+
+function shouldShowReminder(course) {
+  if (!course?.reminderEnabled || Number(course.level) >= 100) return false;
+
+  const today = getTodayStamp();
+  const [hour, minute] = String(course.reminderTime || "19:00").split(":").map(Number);
+  const now = new Date();
+  const scheduled = new Date();
+  scheduled.setHours(hour || 19, minute || 0, 0, 0);
+
+  if (now < scheduled) return false;
+  if (!course.lastReminderDate) return true;
+
+  const last = new Date(course.lastReminderDate);
+  const current = new Date(today);
+  const diffDays = Math.floor((current - last) / (1000 * 60 * 60 * 24));
+  return diffDays >= getReminderGapDays(course.reminderFrequency);
+}
+
+async function checkReminderAlerts(courses) {
+  const dueCourse = (courses || []).find(shouldShowReminder);
+  if (!dueCourse) return;
+
+  const today = getTodayStamp();
+  dueCourse.lastReminderDate = today;
+  setSavedCourses(dashboardCourseCache);
+  showDashboardPopup(`🔔 Reminder: Spend a small study block on <strong>${dueCourse.title}</strong> today. Your finish target is <strong>${formatDueDate(dueCourse.dueDate)}</strong>.`, "info");
+
+  try {
+    await fetch("http://localhost:5000/dash", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        courseId: dueCourse._id || "",
+        userEmail: dueCourse.userEmail || userEmail || "guest",
+        title: dueCourse.title,
+        lastReminderDate: today
+      })
+    });
+  } catch (err) {
+    console.error("Error updating reminder status:", err);
+  }
+}
+
+function getTodayQuizKey() {
+  return `dailyQuiz_${(userEmail || "guest").toLowerCase()}_${getTodayStamp()}`;
+}
+
+function renderDailyQuizWidget(courses) {
+  const container = document.getElementById("dailyQuizWidget");
+  if (!container) return;
+
+  const activeCourses = (courses || []).filter(course => Number(course.level) < 100);
+  if (!activeCourses.length) {
+    container.innerHTML = `<div style="padding:12px; background:#ecfdf5; border:1px solid #bbf7d0; border-radius:10px; color:#166534;"><strong>Daily quiz complete</strong><br>All your saved courses are already completed 🎉</div>`;
+    return;
+  }
+
+  const savedQuiz = JSON.parse(localStorage.getItem(getTodayQuizKey()) || "null");
+  if (savedQuiz) {
+    todayQuizState = savedQuiz;
+  } else {
+    const course = activeCourses[Math.floor(Math.random() * activeCourses.length)];
+    const bank = getQuestionBankForCourse(course.title);
+    const selectedQuestion = bank[Math.floor(Math.random() * bank.length)];
+    todayQuizState = {
+      date: getTodayStamp(),
+      courseTitle: course.title,
+      question: selectedQuestion.question,
+      options: selectedQuestion.options,
+      answerIndex: selectedQuestion.answerIndex,
+      explanation: selectedQuestion.explanation,
+      focusArea: selectedQuestion.focusArea
+    };
+    localStorage.setItem(getTodayQuizKey(), JSON.stringify(todayQuizState));
+  }
+
+  container.innerHTML = `
+    <div style="padding:12px; background:#f8fafc; border:1px solid #dbe4f0; border-radius:10px;">
+      <strong>📅 Daily quiz</strong><br>
+      <small>One random question per day until your courses are completed.</small>
+      <div style="margin-top:10px; font-weight:600;">${todayQuizState.question}</div>
+      ${todayQuizState.options.map((option, index) => `
+        <label style="display:block; margin:6px 0;">
+          <input type="radio" name="dailyQuizAnswer" value="${index}" style="margin-right:8px;"> ${option}
+        </label>
+      `).join("")}
+      <button class="btn add-btn" onclick="submitDailyCourseQuiz()">Submit today's quiz</button>
+      <div id="dailyQuizResult" style="margin-top:10px;"></div>
+    </div>
+  `;
+}
+
+async function submitDailyCourseQuiz() {
+  if (!todayQuizState) return;
+
+  const selected = document.querySelector('input[name="dailyQuizAnswer"]:checked');
+  if (!selected) {
+    alert("Please choose an answer first.");
+    return;
+  }
+
+  const isCorrect = parseInt(selected.value, 10) === Number(todayQuizState.answerIndex);
+  const resultBox = document.getElementById("dailyQuizResult");
+  if (resultBox) {
+    resultBox.innerHTML = `<div style="padding:10px; border-radius:8px; background:${isCorrect ? "#ecfdf5" : "#fff7ed"}; border:1px solid ${isCorrect ? "#86efac" : "#fdba74"}; color:${isCorrect ? "#166534" : "#9a3412"};">${isCorrect ? "✅ Nice work" : "📘 Keep practicing"} — ${todayQuizState.explanation}</div>`;
+  }
+
+  const matchedCourse = dashboardCourseCache.find(course => course.title === todayQuizState.courseTitle) || dashboardCourseCache[0];
+  if (!matchedCourse) return;
+
+  matchedCourse.lastQuizDate = getTodayStamp();
+  matchedCourse.lastQuizScore = isCorrect ? 100 : 0;
+  setSavedCourses(dashboardCourseCache);
+
+  try {
+    await fetch("http://localhost:5000/dash", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        courseId: matchedCourse._id || "",
+        userEmail: matchedCourse.userEmail || userEmail || "guest",
+        title: matchedCourse.title,
+        lastQuizDate: matchedCourse.lastQuizDate,
+        lastQuizScore: matchedCourse.lastQuizScore
+      })
+    });
+  } catch (err) {
+    console.error("Error saving daily quiz status:", err);
+  }
+}
+
+function filterCourses(type){
+  currentFilter = type;
+  loadCourses();
+}
+
+async function addCourse(){
+  const name = document.getElementById("newCourseName").value.trim();
+  let level = parseInt(document.getElementById("newCourseLevel").value, 10);
+
+  if(!name) return alert("Enter course name");
+  if(isNaN(level)) level = 50;
+
+  let courses = (await getSavedCourses(false)).map(normalizeDashboardCourse);
+  const coursePayload = {
+    name,
+    title: name,
+    level,
+    userEmail: userEmail || "guest",
+    platform: "Manual Add",
+    targetDays: 14,
+    dueDate: getDefaultDueDate(14),
+    reminderEnabled: true,
+    reminderFrequency: "daily",
+    reminderTime: "19:00",
+    lastReminderDate: "",
+    lastQuizDate: ""
+  };
+  courses.push(coursePayload);
+  setSavedCourses(courses);
+
+  try {
+    await fetch("http://localhost:5000/dash", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(coursePayload)
+    });
+  } catch (err) {
+    console.error("Error saving manual course:", err);
+  }
+
+  document.getElementById("newCourseName").value = "";
+  document.getElementById("newCourseLevel").value = "";
+
+  loadCourses(false);
+}
+
+async function deleteCourse(index){
+  let courses = (await getSavedCourses(false)).map(normalizeDashboardCourse);
+  const target = courses[index];
+  if (!target) return;
+
+  courses.splice(index,1);
+  setSavedCourses(courses);
+
+  try {
+    await fetch(`http://localhost:5000/dash?${new URLSearchParams({
+      userEmail: target.userEmail || userEmail || "guest",
+      title: target.title || "",
+      courseId: target._id || ""
+    }).toString()}`, {
+      method: "DELETE"
+    });
+  } catch (err) {
+    console.error("Error deleting backend course:", err);
+  }
+
+  loadCourses(false);
+}
+
+async function updateLevel(index, val){
+  let courses = (await getSavedCourses(false)).map(normalizeDashboardCourse);
+  const target = courses[index];
+  if (!target) return;
+
+  const parsedLevel = parseInt(val, 10);
+  target.level = parsedLevel;
+  setSavedCourses(courses);
+  previewLevel(index, parsedLevel);
+
+  try {
+    const res = await fetch("http://localhost:5000/dash", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        courseId: target._id || "",
+        userEmail: target.userEmail || userEmail || "guest",
+        title: target.title,
+        level: parsedLevel
+      })
+    });
+
+    if (!res.ok) {
+      console.error("Level update request failed:", res.status);
+    }
+  } catch (err) {
+    console.error("Error updating course level:", err);
+  }
+
+  loadCourses(false);
+}
+
+function showEdit(){
+  document.getElementById("editBox").style.display = "block";
+}
+
+function saveProfile(){
+  const newName = document.getElementById("editInput").value;
+  if(!newName) return;
+  localStorage.setItem("userName", newName);
+  location.reload();
+}
+
+function cancelEdit(){
+  document.getElementById("editBox").style.display = "none";
+}
+
+function logout(){
+  localStorage.removeItem("userEmail");
+  window.location.href = "index.html";
+}
+
+function showTab(tab){
+  document.getElementById("profileTab").classList.add("hidden");
+  document.getElementById("listTab").classList.add("hidden");
+
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+
+  if(tab === "profile"){
+    document.getElementById("profileTab").classList.remove("hidden");
+    document.querySelectorAll(".tab")[0].classList.add("active");
+  } else {
+    document.getElementById("listTab").classList.remove("hidden");
+    document.querySelectorAll(".tab")[1].classList.add("active");
+    loadCourses(false);
+  }
+}
+
+loadCourses(true);
+
+let currentQuizData = null;
+let currentQuizCourses = [];
+
+// -------------------- Gemini AI Integration --------------------
+async function askGemini(prompt) {
+  try {
+    const response = await fetch('http://localhost:5000/api/ai/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    });
+    const data = await response.json();
+    return data.answer;
+  } catch (err) {
+    console.error(err);
+    return "Error generating response";
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function buildLearnerContext(courses) {
+  if (!courses.length) return "No saved courses yet.";
+
+  return courses.map((course, index) => {
+    const level = typeof course.level === "number" ? course.level : parseInt(course.level, 10) || 0;
+    return `${index + 1}. ${course.title} — completion ${level}% (${getLevelStatus(level)}), platform: ${course.platform || "Online"}`;
+  }).join("\n");
+}
+
+function parseAiJsonResponse(text) {
+  if (!text || typeof text !== "string") return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {}
+
+  const blockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (blockMatch?.[1]) {
+    try {
+      return JSON.parse(blockMatch[1].trim());
+    } catch {}
+  }
+
+  const firstBrace = text.indexOf("{");
+  const lastBrace = text.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    try {
+      return JSON.parse(text.slice(firstBrace, lastBrace + 1));
+    } catch {}
+  }
+
+  return null;
+}
+
+function renderPlanSections(containerId, title, sections) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  container.innerHTML = `
+    <div style="background:#eef4ff; border:1px solid #cfe0ff; border-radius:10px; padding:12px; margin-top:8px;">
+      <div style="font-weight:700; color:#1e3a8a; margin-bottom:10px;">${escapeHtml(title)}</div>
+      <div style="display:grid; gap:10px;">
+        ${sections.map(section => `
+          <div style="background:#fff; border:1px solid #dbe4f0; border-radius:8px; padding:10px;">
+            <div style="font-weight:600; color:#0f172a; margin-bottom:4px;">${escapeHtml(section.heading)}</div>
+            <div style="color:#475569; line-height:1.5;">${escapeHtml(section.text)}</div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function fallbackRoadmapSections(courses) {
+  const sorted = [...courses].sort((a, b) => (a.level ?? 0) - (b.level ?? 0));
+  const weakest = sorted[0];
+  const strongest = sorted[sorted.length - 1];
+
+  return [
+    { heading: "Focus now", text: `Revise ${weakest?.title || "your weakest topic"} first and raise it above 70%.` },
+    { heading: "This week", text: "Spend 20-30 minutes daily on one concept, one example, and one practice task." },
+    { heading: "Next step", text: `Once comfortable, move into ${strongest?.title || "your next stronger topic"} with one mini project.` }
+  ];
+}
+
+function fallbackProjectSections(courses) {
+  const topCourses = courses.slice(0, 3).map(course => course.title).filter(Boolean);
+  const primary = topCourses[0] || "your current topic";
+  const secondary = topCourses[1] || "a related skill";
+  const tertiary = topCourses[2] || "your next topic";
+
+  return [
+    { heading: `${primary} mini build`, text: `Create one small hands-on project and finish it in 1-2 days.` },
+    { heading: `${secondary} practical task`, text: `Build a simple real-world feature that helps you practice the basics.` },
+    { heading: `${tertiary} confidence project`, text: `Combine what you've learned into one portfolio-style exercise.` }
+  ];
+}
+
+function getQuestionBankForCourse(title) {
+  const topic = String(title || "").toLowerCase();
+
+  if (topic.includes("javascript")) {
+    return [
+      { question: "Which keyword creates a block-scoped variable in JavaScript?", options: ["var", "let", "conste", "define"], answerIndex: 1, explanation: "`let` creates a block-scoped variable.", focusArea: "JavaScript fundamentals" },
+      { question: "Which method is commonly used to convert JSON text into a JavaScript object?", options: ["JSON.parse()", "JSON.stringify()", "parseInt()", "toObject()"], answerIndex: 0, explanation: "`JSON.parse()` converts JSON text into an object.", focusArea: "JavaScript data handling" }
+    ];
+  }
+
+  if (topic.includes("python")) {
+    return [
+      { question: "Which Python data type stores key-value pairs?", options: ["list", "tuple", "dictionary", "set"], answerIndex: 2, explanation: "A dictionary stores data as key-value pairs.", focusArea: "Python basics" },
+      { question: "What does indentation control in Python?", options: ["Comments", "Code blocks", "Variable names", "Imports only"], answerIndex: 1, explanation: "Indentation defines code blocks in Python.", focusArea: "Python syntax" }
+    ];
+  }
+
+  if (topic.includes("react")) {
+    return [
+      { question: "Which hook is used to manage local state in a React function component?", options: ["useFetch", "useState", "useNode", "useApp"], answerIndex: 1, explanation: "`useState` is used for local component state.", focusArea: "React state management" },
+      { question: "Props in React are mainly used to:", options: ["Delete components", "Pass data to components", "Compile CSS", "Store database records"], answerIndex: 1, explanation: "Props pass data from parent to child components.", focusArea: "React component basics" }
+    ];
+  }
+
+  if (topic.includes("java")) {
+    return [
+      { question: "Java is primarily known as which type of language?", options: ["Markup", "Object-oriented", "Query", "Stylesheet"], answerIndex: 1, explanation: "Java is an object-oriented programming language.", focusArea: "Java fundamentals" },
+      { question: "Which method is the main entry point of a Java program?", options: ["run()", "start()", "main()", "init()"], answerIndex: 2, explanation: "`main()` is the standard entry point.", focusArea: "Java program structure" }
+    ];
+  }
+
+  if (topic.includes("machine learning") || topic.includes("data science")) {
+    return [
+      { question: "What is the main goal of a train/test split in machine learning?", options: ["To format charts", "To evaluate generalization", "To rename columns", "To compress data"], answerIndex: 1, explanation: "A train/test split helps evaluate how well a model generalizes.", focusArea: "ML evaluation basics" },
+      { question: "Which library is commonly used in Python for tabular data analysis?", options: ["Pandas", "Flask", "TensorBoard", "BeautifulSoup"], answerIndex: 0, explanation: "Pandas is widely used for working with tables and datasets.", focusArea: "Data analysis tools" }
+    ];
+  }
+
+  return [
+    { question: `What is the best next step when your completion in ${title} is still low?`, options: ["Skip the basics", "Revise fundamentals and practice", "Delete the course", "Ignore mistakes"], answerIndex: 1, explanation: "When progress is low, focused revision and practice are the best next steps.", focusArea: title },
+    { question: `Why should you build mini projects while learning ${title}?`, options: ["To avoid practice", "To apply concepts in real tasks", "To reduce understanding", "Only for design"], answerIndex: 1, explanation: "Mini projects help convert theory into real understanding.", focusArea: `${title} practice` }
+  ];
+}
+
+function fallbackQuizFromCourses(courses) {
+  const collected = [];
+  const sortedCourses = [...courses].sort((a, b) => (a.level ?? 0) - (b.level ?? 0));
+
+  sortedCourses.forEach(course => {
+    const bank = getQuestionBankForCourse(course.title);
+    bank.forEach(question => {
+      if (collected.length < 5) {
+        collected.push(question);
+      }
+    });
+  });
+
+  while (collected.length < 5) {
+    collected.push({
+      question: "What learning habit improves retention the most over time?",
+      options: ["Rare cramming", "Consistent practice", "Skipping reviews", "Avoiding feedback"],
+      answerIndex: 1,
+      explanation: "Consistent, repeated practice improves retention much more than cramming.",
+      focusArea: "Study strategy"
+    });
+  }
+
+  return {
+    title: "Personalized Skill Check",
+    questions: collected.slice(0, 5)
+  };
+}
+
+function normalizeQuizData(data, courses) {
+  if (!data || !Array.isArray(data.questions)) {
+    return fallbackQuizFromCourses(courses);
+  }
+
+  const questions = data.questions.slice(0, 5).map((question, index) => {
+    const options = Array.isArray(question.options) && question.options.length
+      ? question.options.slice(0, 4).map(option => String(option))
+      : ["Option A", "Option B", "Option C", "Option D"];
+
+    let answerIndex = Number(question.answerIndex);
+    if (!Number.isInteger(answerIndex) || answerIndex < 0 || answerIndex >= options.length) {
+      const answerText = String(question.answer || "").toLowerCase().trim();
+      answerIndex = options.findIndex(option => option.toLowerCase().trim() === answerText);
+      if (answerIndex < 0) answerIndex = 0;
+    }
+
+    return {
+      question: String(question.question || `Question ${index + 1}`),
+      options,
+      answerIndex,
+      explanation: String(question.explanation || "Review this topic once more."),
+      focusArea: String(question.focusArea || question.question || `Topic ${index + 1}`)
+    };
+  });
+
+  return {
+    title: String(data.title || "Personalized Skill Check"),
+    questions: questions.length ? questions : fallbackQuizFromCourses(courses).questions
+  };
+}
+
+function renderQuiz(quizData) {
+  const quizOutput = document.getElementById("quizOutput");
+  if (!quizOutput) return;
+
+  quizOutput.innerHTML = `
+    <div style="margin-bottom:12px; padding:12px; background:#eef4ff; border-radius:8px; color:#1e3a8a;">
+      <strong>${escapeHtml(quizData.title)}</strong><br>
+      <small>This quiz is based on your saved courses and completion levels.</small>
+    </div>
+    ${quizData.questions.map((question, index) => `
+      <div style="background:#fff; border:1px solid #dbe4f0; border-radius:8px; padding:12px; margin-bottom:12px;">
+        <div style="font-weight:600; margin-bottom:8px;">${index + 1}. ${escapeHtml(question.question)}</div>
+        ${question.options.map((option, optionIndex) => `
+          <label style="display:block; margin:6px 0; cursor:pointer;">
+            <input type="radio" name="quizQuestion${index}" value="${optionIndex}" style="margin-right:8px;">
+            ${escapeHtml(option)}
+          </label>
+        `).join("")}
+        <div id="quizExplanation${index}" style="display:none; margin-top:8px; font-size:13px; color:#475569;"></div>
+      </div>
+    `).join("")}
+    <button class="btn add-btn" onclick="submitQuiz()">Submit Quiz</button>
+    <div id="quizResult" style="margin-top:12px;"></div>
+    <div id="quizSuggestions" style="margin-top:12px;"></div>
+  `;
+}
+
+async function generateDynamicQuiz() {
+  const quizOutput = document.getElementById("quizOutput");
+  const button = document.getElementById("genQuizBtn");
+  currentQuizCourses = (await getSavedCourses(false))
+    .map(normalizeDashboardCourse)
+    .filter(course => !course.userEmail || course.userEmail === userEmail);
+
+  if (!currentQuizCourses.length) {
+    quizOutput.innerHTML = `<div style="color:#b91c1c;">Add courses to your list first, then I can generate a personalized quiz.</div>`;
+    return;
+  }
+
+  button.disabled = true;
+  quizOutput.innerHTML = `<div style="color:#1d4ed8;">Generating a quiz from your current courses and completion levels...</div>`;
+
+  try {
+    const learnerContext = buildLearnerContext(currentQuizCourses);
+    const weakerAreas = currentQuizCourses.filter(course => course.level < 70).map(course => course.title).join(", ") || "fundamentals";
+    const prompt = `Generate a personalized multiple-choice quiz for this learner. Use the saved courses and completion percentages to choose difficulty. Prioritize weaker areas like ${weakerAreas}.\n\nLearner data:\n${learnerContext}\n\nReturn ONLY valid JSON in this exact shape:\n{\n  "title": "Personalized Skill Check",\n  "questions": [\n    {\n      "question": "string",\n      "options": ["option1", "option2", "option3", "option4"],\n      "answerIndex": 0,\n      "explanation": "short explanation",\n      "focusArea": "topic name"\n    }\n  ]\n}\n\nRequirements: exactly 5 questions, practical difficulty, clear options, and a valid answerIndex for each.`;
+
+    const rawResult = await askGemini(prompt);
+    const parsed = parseAiJsonResponse(rawResult);
+    currentQuizData = normalizeQuizData(parsed, currentQuizCourses);
+  } catch (err) {
+    console.error("Error generating quiz:", err);
+    currentQuizData = fallbackQuizFromCourses(currentQuizCourses);
+  } finally {
+    button.disabled = false;
+  }
+
+  renderQuiz(currentQuizData);
+}
+
+async function submitQuiz() {
+  if (!currentQuizData?.questions?.length) return;
+
+  let score = 0;
+  const weakAreas = [];
+  const unanswered = [];
+
+  currentQuizData.questions.forEach((question, index) => {
+    const checked = document.querySelector(`input[name="quizQuestion${index}"]:checked`);
+    if (!checked) {
+      unanswered.push(index + 1);
+      return;
+    }
+
+    const selectedIndex = parseInt(checked.value, 10);
+    const explanationEl = document.getElementById(`quizExplanation${index}`);
+    const isCorrect = selectedIndex === question.answerIndex;
+
+    if (isCorrect) {
+      score++;
+    } else {
+      weakAreas.push(question.focusArea);
+    }
+
+    if (explanationEl) {
+      explanationEl.style.display = "block";
+      explanationEl.style.color = isCorrect ? "#166534" : "#b91c1c";
+      explanationEl.innerHTML = `${isCorrect ? "✅ Correct" : "❌ Not quite"} — ${escapeHtml(question.explanation)}`;
+    }
+  });
+
+  if (unanswered.length) {
+    alert(`Please answer all questions before submitting. Missing: ${unanswered.join(", ")}`);
+    return;
+  }
+
+  const total = currentQuizData.questions.length;
+  const percent = Math.round((score / total) * 100);
+  const resultBox = document.getElementById("quizResult");
+  const suggestionsBox = document.getElementById("quizSuggestions");
+
+  resultBox.innerHTML = `
+    <div style="background:${percent >= 70 ? "#ecfdf5" : percent >= 40 ? "#fff7ed" : "#fef2f2"}; border:1px solid ${percent >= 70 ? "#bbf7d0" : percent >= 40 ? "#fed7aa" : "#fecaca"}; border-radius:8px; padding:12px;">
+      <strong>Score: ${score}/${total} (${percent}%)</strong><br>
+      <span>${percent >= 70 ? "Great work — you're building strong confidence." : percent >= 40 ? "You're learning well; a quick revision will help." : "You should revise the basics before moving ahead."}</span>
+    </div>
+  `;
+
+  suggestionsBox.innerHTML = `<div style="color:#1d4ed8;">Generating personalized suggestions based on your result...</div>`;
+
+  const weakestCourse = [...currentQuizCourses].sort((a, b) => (a.level ?? 0) - (b.level ?? 0))[0];
+  const weakAreaText = weakAreas.length ? weakAreas.join(", ") : "General review and deeper practice";
+
+  try {
+    const prompt = `A learner on LearnOdys scored ${score}/${total} (${percent}%) on a quiz based on these saved courses and completion levels:\n${buildLearnerContext(currentQuizCourses)}\n\nWeak areas from wrong answers: ${weakAreaText}.\n\nGive short personalized suggestions with these headings only:\n1. Focus now\n2. Revise first\n3. Next practice task\n4. Recommended confidence target\nKeep it concise and actionable.`;
+    const result = await askGemini(prompt);
+    suggestionsBox.innerHTML = `
+      <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; white-space:pre-line;">
+        <strong>Suggested next steps</strong><br><br>${escapeHtml(result)}
+      </div>
+    `;
+  } catch (err) {
+    console.error("Error generating quiz suggestions:", err);
+    suggestionsBox.innerHTML = `
+      <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; white-space:pre-line;">
+        <strong>Suggested next steps</strong><br><br>
+        • Focus now: ${escapeHtml(weakAreaText)}
+        • Revise first: ${escapeHtml(weakestCourse?.title || "your weakest saved course")}
+        • Next practice task: build one small exercise or mini project in that topic.
+        • Recommended confidence target: raise your completion to at least 75% before moving to the next topic.
+      </div>
+    `;
+  }
+}
+
+// ------------------ Button Handlers ------------------
+document.getElementById('genRoadmapBtn').addEventListener('click', async () => {
+  const userCourses = (await getSavedCourses(false)).map(normalizeDashboardCourse);
+  const skills = buildLearnerContext(userCourses) || "HTML, CSS, JavaScript";
+  const roadmapOutput = document.getElementById('roadmapOutput');
+  roadmapOutput.innerHTML = `<div style="color:#1d4ed8;">Building a short action plan for your next steps...</div>`;
+
+  try {
+    const prompt = `Create a very practical roadmap for this learner based on saved courses and completion levels:\n${skills}\n\nReturn ONLY valid JSON in this format:\n{\n  "title": "string",\n  "sections": [\n    { "heading": "Focus now", "text": "short action" },\n    { "heading": "This week", "text": "short action" },\n    { "heading": "Next milestone", "text": "short action" }\n  ]\n}\n\nKeep it short, actionable, and encouraging. No long explanations.`;
+    const result = await askGemini(prompt);
+    const parsed = parseAiJsonResponse(result);
+    const sections = Array.isArray(parsed?.sections) && parsed.sections.length
+      ? parsed.sections.map(section => ({ heading: section.heading || "Step", text: section.text || "Keep practicing consistently." })).slice(0, 3)
+      : fallbackRoadmapSections(userCourses);
+    renderPlanSections('roadmapOutput', parsed?.title || 'Your quick roadmap', sections);
+  } catch (err) {
+    console.error('Error generating roadmap:', err);
+    renderPlanSections('roadmapOutput', 'Your quick roadmap', fallbackRoadmapSections(userCourses));
+  }
+});
+
+document.getElementById('genQuizBtn').addEventListener('click', generateDynamicQuiz);
+
+document.getElementById('genProjectBtn').addEventListener('click', async () => {
+  const userCourses = (await getSavedCourses(false)).map(normalizeDashboardCourse);
+  const courses = buildLearnerContext(userCourses) || "HTML Basics, CSS Basics";
+  const projectsOutput = document.getElementById('projectsOutput');
+  projectsOutput.innerHTML = `<div style="color:#1d4ed8;">Finding project ideas you can actually build next...</div>`;
+
+  try {
+    const prompt = `Suggest 3 useful projects for this learner based on saved courses and completion levels:\n${courses}\n\nReturn ONLY valid JSON in this format:\n{\n  "title": "string",\n  "sections": [\n    { "heading": "Project 1", "text": "one short idea with what to build first" },\n    { "heading": "Project 2", "text": "one short idea with what to build first" },\n    { "heading": "Project 3", "text": "one short idea with what to build first" }\n  ]\n}\n\nKeep each idea short, practical, and suited to their current confidence.`;
+    const result = await askGemini(prompt);
+    const parsed = parseAiJsonResponse(result);
+    const sections = Array.isArray(parsed?.sections) && parsed.sections.length
+      ? parsed.sections.map(section => ({ heading: section.heading || "Project", text: section.text || "Build a small practice project." })).slice(0, 3)
+      : fallbackProjectSections(userCourses);
+    renderPlanSections('projectsOutput', parsed?.title || 'Project ideas for you', sections);
+  } catch (err) {
+    console.error('Error generating project suggestions:', err);
+    renderPlanSections('projectsOutput', 'Project ideas for you', fallbackProjectSections(userCourses));
+  }
+});
+</script>
+
+</body>
+</html>

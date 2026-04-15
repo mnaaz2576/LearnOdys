@@ -1,0 +1,29 @@
+<div>
+    <h2>Learning Roadmap</h2>
+    <button id="generateRoadmapBtn">Generate Roadmap</button>
+    <pre id="roadmapOutput" style="margin-top:20px; white-space: pre-line;"></pre>
+</div>
+
+<script>
+async function askGemini(promptText) {
+    try {
+        const response = await fetch('/api/ai/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: promptText })
+        });
+        const data = await response.json();
+        return data.answer;
+    } catch (err) {
+        console.error("Error calling Gemini:", err);
+        return "Error generating response";
+    }
+}
+
+document.getElementById('generateRoadmapBtn').addEventListener('click', async () => {
+    const userSkills = "HTML, CSS, JS"; // you can replace with dynamic courses
+    const prompt = `Create a personalized learning roadmap for a user with these skills: ${userSkills}`;
+    const result = await askGemini(prompt);
+    document.getElementById('roadmapOutput').innerText = result;
+});
+</script>
