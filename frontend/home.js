@@ -90,251 +90,298 @@ window.onload = function(){
 }
 
 // ENHANCED AI MENTOR
-async function askAI(){
-    const q = document.getElementById("aiQuestion").value;
+// ENHANCED AI MENTOR
+async function askAI() {
+    const input = document.getElementById("aiQuestion");
+    const output = document.getElementById("chatMessages");
+    if (!input || !output) return;
 
-    if(q.trim() === ""){
+    const query = input.value.trim();
+    if (!query) return;
+
+    // Add user message
+    addMessage("user", query);
+    input.value = "";
+    updateCharCount();
+    setSendLoading(true);
+
+    const lowerQ = query.toLowerCase();
+
+    // ── GLOBAL COMMANDS (Reset/Greeting) ──
+    const isGreeting = ["hi", "hello", "hey", "hii", "hlo", "heya", "greetings"].some(g => lowerQ === g || lowerQ.startsWith(g + " "));
+    const isReset = ["clear", "reset", "restart", "start over"].some(r => lowerQ === r);
+
+    if (isReset) {
+        conversationState.stage = "waiting";
+        conversationState.userInterest = null;
+        addMessage("bot", "Resetting our conversation. What would you like to learn about today? (e.g. Python, Web Dev)");
+        setSendLoading(false);
         return;
     }
 
-    // Add user message to chat
-    addMessage("user", q);
-
-    // Clear input
-    document.getElementById("aiQuestion").value = "";
-
-    const lowerQ = q.toLowerCase().trim();
-
-    // STAGE 0: WAITING - Start conversation when user initiates
-    if(conversationState.stage === "waiting") {
-        if(["hi", "hello", "hey", "hii", "hello", "hlo", "start", "begin", "help", "mentor", "ai"].some(g => lowerQ.includes(g))) {
-            addMessage("bot", "👋 Hello! I'm your AI learning mentor. What would you like to learn today? (e.g., Python, web development, data science, etc.)");
-            conversationState.stage = "interest";
-            return;
+    // ── STAGE 0: INITIALIZATION & SMART ROUTING ──
+    if (conversationState.stage === "waiting") {
+        if (isGreeting) {
+            handleBotGreeting();
         } else {
-            // If user types something else, assume they want to start learning conversation
-            addMessage("bot", "👋 Hi there! I'm here to help you find the perfect learning path. What topic interests you? (e.g., Python, web development, data science, etc.)");
+            // Smart Map Intent to Topic
+            const mappedTopic = mapIntentToTopic(query);
+            conversationState.userInterest = mappedTopic;
+            addMessage("bot", `Great choice! **${mappedTopic}** is a fantastic field to dive into. Let me build a learning path for you.`);
             conversationState.stage = "interest";
+            await provideTopicDetailsAndRoadmap(mappedTopic);
+        }
+        setSendLoading(false);
+        return;
+    }
+
+    // ── STAGE 1: COLLECT USER INTEREST ──
+    if (conversationState.stage === "interest" && !isGreeting) {
+        conversationState.userInterest = query;
+        addMessage("bot", `Nice! Focusing on **${query}** is a smart move. Generating your personal roadmap...`);
+        await provideTopicDetailsAndRoadmap(query);
+        setSendLoading(false);
+        return;
+    }
+
+    // ── STAGE 3: EXPERIENCE ASSESSMENT ──
+    if (conversationState.stage === "experience" && !isGreeting) {
+        const levels = ["beginner", "intermediate", "advanced", "expert", "none", "start"];
+        if (levels.some(l => lowerQ.includes(l))) {
+            conversationState.userExperience = query;
+            addMessage("bot", "Got it. Now, what's your ultimate goal? (e.g., Get a job, build a project, just curious)");
+            conversationState.stage = "goals";
+            setTimeout(() => showGoalOptions(), 600);
+            setSendLoading(false);
             return;
         }
     }
 
-    // STAGE 1: COLLECT USER INTEREST
-    if(conversationState.stage === "interest") {
-        conversationState.userInterest = q;
-        addMessage("bot", `Great choice! ${q} is an excellent topic to learn. Let me create a personalized learning roadmap for you.`);
-        setTimeout(() => {
-            provideTopicDetailsAndRoadmap(q);
-        }, 800);
+    // ── STAGE 4: USER GOALS ──
+    if (conversationState.stage === "goals" && !isGreeting) {
+        conversationState.userGoal = query;
+        addMessage("bot", "Understood. Searching for the best courses matching your profile...");
+        conversationState.stage = "courses";
+        setTimeout(() => generatePersonalizedRecommendations(), 1000);
+        setSendLoading(false);
         return;
     }
 
-    // STAGE 2: ROADMAP PROGRESSION
-    if(conversationState.stage === "roadmap") {
-        // Roadmap progression is handled by the step functions
-        return;
-    }
-
-    // STAGE 3: ASSESS EXPERIENCE LEVEL
-    if(conversationState.stage === "experience") {
-        conversationState.userExperience = q;
-        addMessage("bot", `Thanks for sharing! Now, what's your main goal with learning ${conversationState.userInterest}?`);
-
-        setTimeout(() => {
-            showGoalOptions();
-        }, 600);
-        return;
-    }
-
-    // STAGE 4: UNDERSTAND GOALS
-    if(conversationState.stage === "goals") {
-        conversationState.userGoal = q;
-        addMessage("bot", "Perfect! Based on what you've told me, let me find the ideal courses for you.");
-
-        setTimeout(() => {
-            generatePersonalizedRecommendations();
-        }, 1000);
-        return;
-    }
-
-    // STAGE 5: COURSE SELECTION & ALTERNATIVES
-    if(conversationState.stage === "courses") {
-        // Handle course selection or alternative requests
-        if(lowerQ.includes("alternative") || lowerQ.includes("different") || lowerQ.includes("other")) {
-            addMessage("bot", "No problem! Let me suggest some alternatives that might better match your goals.");
-            setTimeout(() => {
-                showAlternativeCourses();
-            }, 800);
+    // ── STAGE 5: COURSE SELECTION ──
+    if (conversationState.stage === "courses" && !isGreeting) {
+        // Try to match a course selection
+        let matched = null;
+        for (const c of conversationState.recommendedCourses) {
+            if (lowerQ.includes(c.title.toLowerCase())) { matched = c; break; }
+        }
+        if (matched) {
+            selectCourseWithValidation(matched);
+            setSendLoading(false);
             return;
         }
-
-        // Check if user is selecting a course - improved matching logic
-        let courseMatch = null;
-        let bestMatchScore = 0;
-
-        for (const course of conversationState.recommendedCourses) {
-            const courseTitle = course.title.toLowerCase();
-            const userInput = lowerQ;
-
-            // Exact match gets highest score
-            if (courseTitle === userInput) {
-                courseMatch = course;
-                bestMatchScore = 100;
-                break;
-            }
-
-            // Check if user input contains the course title
-            if (userInput.includes(courseTitle)) {
-                const score = courseTitle.length / userInput.length * 80;
-                if (score > bestMatchScore) {
-                    courseMatch = course;
-                    bestMatchScore = score;
-                }
-            }
-
-            // Check if course title contains user input
-            if (courseTitle.includes(userInput)) {
-                const score = userInput.length / courseTitle.length * 60;
-                if (score > bestMatchScore) {
-                    courseMatch = course;
-                    bestMatchScore = score;
-                }
-            }
-
-            // Word-based matching for partial matches
-            const userWords = userInput.split(' ');
-            const courseWords = courseTitle.split(' ');
-            const matchingWords = userWords.filter(word =>
-                courseWords.some(courseWord => courseWord.includes(word) || word.includes(courseWord))
-            );
-
-            if (matchingWords.length > 0) {
-                const score = (matchingWords.length / Math.max(userWords.length, courseWords.length)) * 40;
-                if (score > bestMatchScore && score > 0.3) { // Require at least 30% word match
-                    courseMatch = course;
-                    bestMatchScore = score;
-                }
-            }
-        }
-
-        // Only proceed if we have a confident match (score > 20)
-        if (courseMatch && bestMatchScore > 20) {
-            selectCourseWithValidation(courseMatch);
-            return;
-        }
-
-        // General conversation
-        addMessage("bot", "I can help you choose the right course. Would you like me to show you alternatives or explain more about these options?");
-        return;
     }
 
-    // FALLBACK: Use AI for general questions
-    addMessage("bot", "⏳");
+    // ── CONVERSATIONAL FALLBACK (Ask the API) ──
+    // If we reach here, the input didn't advance a stage or was a general question
+    const loadingId = "typing-" + Date.now();
+    output.innerHTML += makeTypingBubble(loadingId);
+    output.scrollTop = output.scrollHeight;
 
-    try{
+    try {
         const res = await fetch("http://localhost:5000/api/ai/ask", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                prompt: `You are an expert course advisor for LearnOdys. The user wants to learn: ${conversationState.userInterest || 'a new topic'}.\nExperience level: ${conversationState.userExperience || 'unknown'}.\nGoal: ${conversationState.userGoal || 'unknown'}.\nUser question: ${q}.\nRespond in a friendly, helpful way. If the user asks about a topic, include a short explanation, the main prerequisites, and 2-3 relevant course recommendations with why each one is a good fit. Keep the answer concise but useful.\nOnly recommend from the available course catalog if it matches.`,
+                prompt: `User is at stage: ${conversationState.stage}. Interest: ${conversationState.userInterest || 'Unknown'}. Goal: ${conversationState.userGoal || 'Unknown'}. User said: "${query}". Keep context in mind and answer naturally. If they seem to be picking a topic, guide them. If they ask a general question, answer it.`,
                 courseCatalog: buildCourseCatalogPrompt()
             })
         });
 
         const data = await res.json();
-        removeLastMessage();
+        const loadingEl = document.getElementById(loadingId);
+        if (loadingEl) loadingEl.remove();
 
-        if(data.answer) {
+        if (data.answer) {
             addMessage("bot", data.answer);
+        } else {
+            addMessage("bot", "I'm here to help! What's on your mind regarding your learning journey?");
         }
-
-    }catch(err){
-        removeLastMessage();
-        addMessage("bot", "I'm here to help! What would you like to know about your learning journey?");
-        console.log(err);
+    } catch (err) {
+        console.error("AI Error:", err);
+        const loadingEl = document.getElementById(loadingId);
+        if (loadingEl) loadingEl.remove();
+        addMessage("bot", "I'm having trouble connecting to my brain right now. Can we try a simple search?");
+    } finally {
+        setSendLoading(false);
     }
 }
 
+function handleBotGreeting() {
+    addMessage("bot", "👋 Hello! I'm your AI learning mentor. What would you like to learn today? You can pick a skill below or type any topic (e.g. Python, Web Development).");
+    conversationState.stage = "interest";
+}
+
+
 // MESSAGE HANDLING FUNCTIONS
-function escapeHtml(text) {
-    return String(text)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
+// MESSAGE RENDERING
+function makeUserBubble(text) {
+    const userLabel = (localStorage.getItem("userEmail") || "U")[0].toUpperCase();
+    return `
+    <div class="ai-bubble user">
+        <div class="ai-bubble-avatar user-av">${escapeHtml(userLabel)}</div>
+        <div class="ai-bubble-body">${escapeHtml(text)}</div>
+    </div>`;
+}
+
+function makeBotBubble(html) {
+    return `
+    <div class="ai-bubble bot">
+        <div class="ai-bubble-avatar">🤖</div>
+        <div class="ai-bubble-body">${html}</div>
+    </div>`;
+}
+
+function makeTypingBubble(id) {
+    return `
+    <div class="ai-bubble bot" id="${id}">
+        <div class="ai-bubble-avatar">🤖</div>
+        <div class="typing-indicator">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        </div>
+    </div>`;
 }
 
 function formatBotMessage(text) {
-    const safeText = escapeHtml(text);
-    const lines = safeText.split("\n");
-    let html = "";
+    if (!text) return "";
+    let html = String(text)
+        .replace(/\*\*(.+?)\*\*/g, (_, m) => `<strong>${escapeHtml(m)}</strong>`)
+        .replace(/__(.+?)__/g, (_, m) => `<strong>${escapeHtml(m)}</strong>`);
+
+    const lines = html.split("\n");
+    const parts = [];
     let inList = false;
 
-    lines.forEach(line => {
-        const trimmed = line.trim();
-
-        if (trimmed.startsWith("• ") || trimmed.startsWith("- ")) {
-            if (!inList) {
-                html += '<ul class="bot-list">';
-                inList = true;
-            }
-            const item = trimmed.replace(/^[•-]\s*/, "").replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-            html += `<li>${item}</li>`;
+    lines.forEach(raw => {
+        const line = raw.trim();
+        if (!line) {
+            if (inList) { parts.push("</ul>"); inList = false; }
+            parts.push('<div class="bot-spacer"></div>');
             return;
         }
 
-        if (inList) {
-            html += "</ul>";
-            inList = false;
+        if (/^[•\-\*]\s/.test(line)) {
+            if (!inList) { parts.push('<ul class="bot-list">'); inList = true; }
+            parts.push(`<li>${line.replace(/^[•\-\*]\s+/, "")}</li>`);
+        } else {
+            if (inList) { parts.push("</ul>"); inList = false; }
+            parts.push(`<div>${line}</div>`);
         }
-
-        if (!trimmed) {
-            html += '<div class="bot-spacer"></div>';
-            return;
-        }
-
-        const formatted = trimmed.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-        html += `<div>${formatted}</div>`;
     });
 
-    if (inList) {
-        html += "</ul>";
-    }
-
-    return html;
+    if (inList) parts.push("</ul>");
+    return parts.join("");
 }
 
 function addMessage(sender, text) {
     const chatMessages = document.getElementById("chatMessages");
-    const messageDiv = document.createElement("div");
-    messageDiv.className = sender === "user" ? "user-message" : "bot-message";
+    if (!chatMessages) return;
 
-    if (sender === "bot") {
-        messageDiv.innerHTML = formatBotMessage(text);
+    if (sender === "user") {
+        chatMessages.innerHTML += makeUserBubble(text);
     } else {
-        messageDiv.innerText = text;
+        chatMessages.innerHTML += makeBotBubble(formatBotMessage(text));
     }
-
-    chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-function removeLastMessage() {
-    const chatMessages = document.getElementById("chatMessages");
-    if (chatMessages.lastChild) {
-        chatMessages.removeChild(chatMessages.lastChild);
+// UI HELPERS
+function setSendLoading(loading) {
+    const btn = document.getElementById("aiSendBtn");
+    if (!btn) return;
+    btn.disabled = loading;
+    btn.innerHTML = loading 
+        ? `<div class="send-spinner"></div>` 
+        : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
+}
+
+function updateCharCount() {
+    const input = document.getElementById("aiQuestion");
+    const counter = document.getElementById("charCounter");
+    if (!input || !counter) return;
+    const len = input.value.length;
+    counter.innerText = `${len} / 500`;
+    counter.classList.toggle("limit", len >= 450);
+}
+
+function handleChatEnter(e) {
+    if (e.key === "Enter") askAI();
+}
+
+function sendQuickChip(topic) {
+    const input = document.getElementById("aiQuestion");
+    if (input) {
+        input.value = topic;
+        updateCharCount();
+        askAI();
     }
 }
 
 // ROADMAP FUNCTIONS
-function provideTopicDetailsAndRoadmap(topic) {
+async function provideTopicDetailsAndRoadmap(topic) {
     const lowerTopic = topic.toLowerCase();
-    const topicInfo = getTopicInformation(lowerTopic);
+    let topicInfo = getTopicInformation(lowerTopic);
 
-    addMessage("bot", `${topicInfo.description}\n\n${topicInfo.prerequisites}`);
+    // If topic is unknown, use AI to generate a roadmap
+    if (!topicInfo) {
+        const loadingId = "roadmap-loading-" + Date.now();
+        const chatMessages = document.getElementById("chatMessages");
+        chatMessages.innerHTML += makeTypingBubble(loadingId);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        try {
+            const res = await fetch("http://localhost:5000/api/ai/ask", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    prompt: `You are a learning expert. Generate a detailed learning guide for the topic: "${topic}".
+                    Format your response EXCALLY like this:
+                    DESCRIPTION: [1-2 sentences about what it is]
+                    PREREQUISITES: [Key things to know before starting]
+                    ROADMAP:
+                    • Month 1: [Step 1]
+                    • Month 2: [Step 2]
+                    • Month 3: [Step 3]
+                    • Month 4: [Step 4]
+                    
+                    Keep the roadmap steps starting with a bullet point.`
+                })
+            });
+            const data = await res.json();
+            const loadingEl = document.getElementById(loadingId);
+            if (loadingEl) loadingEl.remove();
+
+            if (data.answer) {
+                topicInfo = parseAiRoadmap(data.answer, topic);
+            }
+        } catch (err) {
+            console.error("Roadmap AI Error:", err);
+            const loadingEl = document.getElementById(loadingId);
+            if (loadingEl) loadingEl.remove();
+        }
+    }
+
+    // Still no info (fail-safe fallback)
+    if (!topicInfo) {
+        topicInfo = {
+            description: `Ready to explore ${topic}? It's a great field with many opportunities.`,
+            prerequisites: "Prerequisites: Basic computer skills and a curious mind.",
+            roadmap: "• Step 1: Basics and core concepts\n• Step 2: Intermediate techniques\n• Step 3: Practical projects\n• Step 4: Advanced specialization"
+        };
+    }
+
+    addMessage("bot", `**${topic.toUpperCase()} GUIDE**\n\n${topicInfo.description}\n\n${topicInfo.prerequisites}`);
 
     // Initialize roadmap steps
     conversationState.roadmapSteps = parseRoadmapSteps(topicInfo.roadmap);
@@ -346,6 +393,23 @@ function provideTopicDetailsAndRoadmap(topic) {
         showRoadmapStep(0);
     }, 1000);
 }
+
+function parseAiRoadmap(aiText, topic) {
+    try {
+        const descriptionMatch = aiText.match(/DESCRIPTION:\s*(.*?)(?=\s*PREREQUISITES:|$)/i);
+        const prereqMatch = aiText.match(/PREREQUISITES:\s*(.*?)(?=\s*ROADMAP:|$)/i);
+        const roadmapMatch = aiText.match(/ROADMAP:\s*([\s\S]*)/i);
+
+        return {
+            description: descriptionMatch ? descriptionMatch[1].trim() : `${topic} is an exciting area to master.`,
+            prerequisites: prereqMatch ? prereqMatch[1].trim() : "Prerequisites: None - jump straight in!",
+            roadmap: roadmapMatch ? roadmapMatch[1].trim() : "• Step 1: Fundamentals\n• Step 2: Building projects\n• Step 3: Career prep"
+        };
+    } catch {
+        return null;
+    }
+}
+
 
 function parseRoadmapSteps(roadmapText) {
     const lines = roadmapText.split('\n');
@@ -823,21 +887,16 @@ function getTopicInformation(topic) {
         }
     };
 
-    // Find matching topic or provide default
+    // Find matching topic or provide null for AI fallback
     for(let key in topicData) {
         if(topic.includes(key)) {
             return topicData[key];
         }
     }
 
-    // Default response for unknown topics
-    const topicLabel = topic.charAt(0).toUpperCase() + topic.slice(1);
-    return {
-        description: `📚 ${topicLabel} is a valuable area to explore and can open up strong learning and career opportunities.`,
-        prerequisites: `📋 Prerequisites: Basic computer confidence, curiosity, and willingness to practice consistently in ${topicLabel}.`,
-        roadmap: `🗺️ Learning Roadmap:\n• Weeks 1-2: Understand the fundamentals and tools used in ${topicLabel}\n• Weeks 3-4: Practice the core concepts with guided exercises in ${topicLabel}\n• Weeks 5-6: Build one small hands-on project focused on ${topicLabel}\n• Weeks 7+: Create a stronger real-world project and explore advanced ${topicLabel} topics`
-    };
+    return null;
 }
+
 
 // UTILITY FUNCTIONS
 function buildCourseCatalogPrompt() {
@@ -855,3 +914,42 @@ function handleChatEnter(event){
         askAI();
     }
 }
+
+// Utility to escape HTML and prevent XSS
+function escapeHtml(text) {
+    if (!text) return "";
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Maps natural language intent to canonical topics
+function mapIntentToTopic(query) {
+    const q = query.toLowerCase();
+    
+    if (q.includes("website") || q.includes("web app") || q.includes("build a site") || q.includes("front end") || q.includes("frontend") || q.includes("back end") || q.includes("backend")) {
+        return "Web Development";
+    }
+    if (q.includes("data") || q.includes("analyze") || q.includes("analytics") || q.includes("statistics") || q.includes("visualization")) {
+        return "Data Science";
+    }
+    if (q.includes("ai") || q.includes("artificial") || q.includes("intelligence") || q.includes("machine learning") || q.includes("ml") || q.includes("deep learning")) {
+        return "Machine Learning";
+    }
+    if (q.includes("python") || q.includes("script") || q.includes("automation") || q.includes("snake")) {
+        return "Python";
+    }
+    if (q.includes("java ") || q === "java" || q.includes("spring boot") || q.includes("android")) {
+        return "Java";
+    }
+    if (q.includes("react") || q.includes("component") || q.includes("hooks")) {
+        return "React";
+    }
+    if (q.includes("js") || q.includes("javascript") || q.includes("node")) {
+        return "JavaScript";
+    }
+    
+    // Fallback: Just capitalize the first letter of their query
+    return query.charAt(0).toUpperCase() + query.slice(1);
+}
+

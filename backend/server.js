@@ -206,7 +206,7 @@ app.post("/interested", async (req, res) => {
 // ======================
 async function askGroq(prompt, dbCourses = []) {
   try {
-    let systemMessage = "You are an AI course advisor. Suggest a structured learning path in bullet points. CRITICAL RULES: You MUST strictly only recommend courses from the provided 'Available Database Courses' list below. DO NOT make up, invent, or suggest any external courses outside this list. You MUST output the EXACT literal course titles exactly as they appear in the list, so the user can easily search for them. If the list is completely empty, reply that there are no such courses found in the database.";
+    let systemMessage = "You are a conversational AI Course Assistant for LearnOdys. Respond directly and naturally to the user's specific query. CRITICAL RULE: If the user asks for course recommendations, study paths, or roadmaps, you MUST strictly ONLY use courses from the 'Available Database Courses' list below. Provide their EXACT literal titles so the user can search them. DO NOT invent or recommend any external courses. If they just ask a simple question, greet them or answer it conversationally.";
     
     if (dbCourses.length > 0) {
       systemMessage += "\n\nAvailable Database Courses:\n" + dbCourses.map(c => `- ${c.title} (Platform: ${c.platform}, Level: ${c.level || "Any"})`).join("\n");
@@ -216,6 +216,7 @@ async function askGroq(prompt, dbCourses = []) {
       "https://api.groq.com/openai/v1/chat/completions",
       {
         model: "llama-3.1-8b-instant",
+        temperature: 0,
         messages: [
           {
             role: "system",
@@ -263,12 +264,12 @@ app.post("/api/ai/ask", async (req, res) => {
     if (keywords.length > 0) {
         dbCourses = await Course.find({
             $or: keywords.map(kw => ({ title: { $regex: kw, $options: "i" } }))
-        }).limit(20);
+        }).limit(60);
     } 
     
     // Fallback context: fetch popular/random if none matched keywords
     if (dbCourses.length === 0) {
-        dbCourses = await Course.find().limit(15);
+        dbCourses = await Course.find().limit(40);
     }
 
     const answer = await askGroq(prompt, dbCourses);

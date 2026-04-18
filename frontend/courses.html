@@ -142,27 +142,49 @@
             <p>Explore curated learning options, compare levels, and open the best course for your next step.</p>
         </div>
 
-        <button id="advisorFab" class="advisor-fab" onclick="toggleAdvisorWidget()">🤖 AI Help</button>
+        <button id="advisorFab" class="advisor-fab" onclick="toggleAdvisorWidget()">
+            <span class="fab-icon">🤖</span> <span class="fab-label">AI Guide</span>
+        </button>
 
         <div id="advisorWidget" class="course-ai-helper">
-            <div class="helper-header-row">
-                <div>
-                    <h3>🤖 AI Course Guide</h3>
-                    <p>Quick help for roadmap, issues, and course overlap.</p>
+            <!-- Header -->
+            <div class="ai-widget-header">
+                <div class="ai-widget-header-left">
+                    <div class="ai-avatar-header">🤖</div>
+                    <div>
+                        <div class="ai-widget-title">AI Course Guide</div>
+                        <div class="ai-widget-subtitle">Powered by LearnOdys AI</div>
+                    </div>
                 </div>
-                <div class="helper-header-actions">
-                    <button class="helper-roadmap-btn" onclick="generateCourseRoadmap()">Roadmap</button>
-                    <button class="helper-close-btn" onclick="toggleAdvisorWidget(false)">✕</button>
+                <div class="ai-widget-header-actions">
+                    <button class="ai-header-btn ai-header-btn--clear" onclick="clearAdvisorChat()" title="Clear chat">🗑</button>
+                    <button class="ai-header-btn ai-header-btn--close" onclick="toggleAdvisorWidget(false)">✕</button>
                 </div>
             </div>
 
+            <!-- Selected course chips -->
             <div id="advisorSelectedCourses" class="selected-course-tags"></div>
             <div id="advisorAlert" class="advisor-alert" style="display:none;"></div>
-            <div id="advisorOutput" class="advisor-output">Select up to 2 courses for comparison, then ask the AI which one fits better or what to study next.</div>
 
+            <!-- Chat output -->
+            <div id="advisorOutput" class="advisor-output"></div>
+
+            <!-- Quick suggestions -->
+            <div class="ai-quick-chips" id="aiQuickChips">
+                <button class="ai-chip" onclick="sendQuickChip('Generate my learning roadmap')">🗺 Roadmap</button>
+                <button class="ai-chip" onclick="sendQuickChip('Which course is best for beginners?')">🎯 For beginners</button>
+                <button class="ai-chip" onclick="sendQuickChip('Compare my selected courses')">⚖ Compare</button>
+                <button class="ai-chip" onclick="sendQuickChip('What should I study next?')">🚀 What\'s next?</button>
+            </div>
+
+            <!-- Input row -->
             <div class="advisor-controls">
-                <input type="text" id="advisorInput" placeholder="Which course should I start with?" onkeypress="handleAdvisorEnter(event)">
-                <button class="advisor-ask-btn" onclick="askCourseAdvisor()">Ask</button>
+                <div class="advisor-input-wrap">
+                    <input type="text" id="advisorInput" placeholder="Ask anything about your courses…" onkeypress="handleAdvisorEnter(event)" maxlength="300">
+                </div>
+                <button class="advisor-send-btn" id="advisorSendBtn" onclick="askCourseAdvisor()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
             </div>
         </div>
 
@@ -186,8 +208,10 @@ if(user){
 
 // 🔓 LOGOUT
 function logout(){
-    localStorage.removeItem("userEmail")
-    window.location.href = "index.html"
+    const email = localStorage.getItem("userEmail") || "guest";
+    localStorage.removeItem(`advisorChat_${email.toLowerCase()}`);
+    localStorage.removeItem("userEmail");
+    window.location.href = "index.html";
 }
 
 // 🔍 NAV SEARCH FUNCTION
@@ -357,6 +381,7 @@ if(search){
     background: #ffd7dc;
 }
 
+/* ===== AI ADVISOR FAB ===== */
 .advisor-fab {
     position: fixed;
     left: 22px;
@@ -364,148 +389,379 @@ if(search){
     z-index: 1101;
     border: none;
     border-radius: 999px;
-    padding: 12px 16px;
+    padding: 13px 20px;
     background: linear-gradient(135deg, #3152db 0%, #4f7cff 100%);
     color: #fff;
     font-weight: 700;
-    box-shadow: 0 16px 32px rgba(49, 82, 219, 0.28);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 8px 24px rgba(49, 82, 219, 0.38);
     cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    animation: fabPulse 2.8s ease-in-out infinite;
+}
+.advisor-fab:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 14px 32px rgba(49, 82, 219, 0.46);
+    animation: none;
+}
+@keyframes fabPulse {
+    0%, 100% { box-shadow: 0 8px 24px rgba(49,82,219,0.38); }
+    50%       { box-shadow: 0 8px 32px rgba(49,82,219,0.58), 0 0 0 6px rgba(79,124,255,0.14); }
 }
 
+/* ===== AI WIDGET PANEL ===== */
 .course-ai-helper {
     position: fixed;
     left: 22px;
-    bottom: 78px;
-    width: 340px;
+    bottom: 84px;
+    width: 420px;
     max-width: calc(100vw - 32px);
-    padding: 14px;
-    border-radius: 18px;
-    border: 1px solid #dbe6f6;
-    background: linear-gradient(135deg, #f8fbff 0%, #eef4ff 100%);
-    box-shadow: 0 16px 34px rgba(37, 99, 235, 0.16);
+    border-radius: 22px;
+    border: 1px solid rgba(99,139,255,0.18);
+    background: #ffffff;
+    box-shadow: 0 24px 60px rgba(37,99,235,0.18), 0 4px 16px rgba(0,0,0,0.06);
     z-index: 1100;
     display: none;
+    flex-direction: column;
+    max-height: calc(100vh - 110px);
+    overflow: hidden;
+    animation: widgetSlideUp 0.22s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes widgetSlideUp {
+    from { opacity: 0; transform: translateY(16px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.helper-header-row {
+/* --- Widget Header --- */
+.ai-widget-header {
     display: flex;
     justify-content: space-between;
-    gap: 10px;
-    align-items: flex-start;
-    margin-bottom: 10px;
-}
-
-.helper-header-row h3 {
-    margin: 0 0 4px;
-    color: #1f2d3d;
-    font-size: 16px;
-}
-
-.helper-header-row p {
-    margin: 0;
-    color: #526173;
-    font-size: 12px;
-}
-
-.helper-header-actions {
-    display: flex;
-    gap: 8px;
     align-items: center;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #1e3aac 0%, #3152db 60%, #4f7cff 100%);
+    border-radius: 22px 22px 0 0;
+    flex-shrink: 0;
 }
-
-.helper-roadmap-btn,
-.advisor-ask-btn,
-.helper-close-btn {
-    border: none;
-    border-radius: 10px;
-    padding: 9px 12px;
-    font-weight: 600;
-    cursor: pointer;
+.ai-widget-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
-
-.helper-roadmap-btn {
-    background: #3152db;
-    color: white;
-}
-
-.helper-close-btn {
-    background: #e7efff;
-    color: #2449d8;
+.ai-avatar-header {
     width: 36px;
-    padding: 9px 0;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
 }
-
-.advisor-ask-btn {
-    background: #e7efff;
-    color: #2449d8;
+.ai-widget-title {
+    color: #fff;
+    font-weight: 700;
+    font-size: 15px;
+    line-height: 1.2;
 }
+.ai-widget-subtitle {
+    color: rgba(255,255,255,0.65);
+    font-size: 11px;
+    margin-top: 1px;
+}
+.ai-widget-header-actions {
+    display: flex;
+    gap: 6px;
+}
+.ai-header-btn {
+    border: none;
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+.ai-header-btn--clear  { background: rgba(255,255,255,0.12); color: #fca5a5; }
+.ai-header-btn--clear:hover  { background: rgba(239,68,68,0.25); }
+.ai-header-btn--close  { background: rgba(255,255,255,0.12); color: #fff; }
+.ai-header-btn--close:hover  { background: rgba(255,255,255,0.22); }
 
+/* --- Selected course chips --- */
 .selected-course-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin: 10px 0;
+    gap: 6px;
+    padding: 10px 14px 4px;
+    max-height: 96px;
+    overflow-y: auto;
+    flex-shrink: 0;
 }
-
 .selected-course-chip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 7px 10px;
+    gap: 5px;
+    padding: 5px 10px;
     border-radius: 999px;
-    background: #fff;
-    border: 1px solid #cddcff;
-    font-size: 13px;
-    color: #1f2d3d;
+    background: #eef4ff;
+    border: 1px solid #bfdbfe;
+    font-size: 12px;
+    color: #1e3a8a;
+    font-weight: 500;
 }
-
 .selected-course-chip button {
     border: none;
     background: transparent;
-    color: #3152db;
+    color: #3b82f6;
     cursor: pointer;
     font-weight: 700;
+    padding: 0;
+    line-height: 1;
 }
-
 .selected-course-chip.empty {
-    color: #64748b;
+    color: #94a3b8;
+    background: #f8fafc;
+    border-color: #e2e8f0;
 }
 
+/* --- Alert bar --- */
 .advisor-alert {
+    margin: 0 14px 6px;
     background: #fff7ed;
     border: 1px solid #fdba74;
     color: #9a3412;
     border-radius: 10px;
-    padding: 10px 12px;
-    margin-bottom: 10px;
-    font-size: 13px;
+    padding: 9px 12px;
+    font-size: 12px;
+    flex-shrink: 0;
 }
 
+/* --- Chat messages area --- */
 .advisor-output {
-    background: #fff;
-    border: 1px solid #dbe4f0;
-    border-radius: 12px;
-    padding: 12px;
-    min-height: 64px;
-    color: #334155;
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #f8fafc;
+    min-height: 200px;
+    max-height: 320px;
+    scroll-behavior: smooth;
+}
+.advisor-output:empty::before {
+    content: 'Ask me anything about your courses 👋';
+    color: #94a3b8;
+    font-size: 13px;
+    align-self: center;
+    margin: auto;
+    text-align: center;
+}
+
+/* Message bubbles */
+.ai-bubble {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    animation: bubbleFadeIn 0.22s ease;
+}
+@keyframes bubbleFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.ai-bubble.user { flex-direction: row-reverse; }
+.ai-bubble-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3152db, #4f7cff);
+    color: #fff;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+.ai-bubble-avatar.user-av {
+    background: linear-gradient(135deg, #0f766e, #14b8a6);
+}
+.ai-bubble-body {
+    max-width: 82%;
+    padding: 10px 13px;
+    border-radius: 16px;
+    font-size: 13.5px;
     line-height: 1.55;
+    color: #1e293b;
+}
+.ai-bubble.bot .ai-bubble-body {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-top-left-radius: 4px;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.05);
+}
+.ai-bubble.user .ai-bubble-body {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    border-top-right-radius: 4px;
+}
+.ai-bubble.user .ai-bubble-body strong,
+.ai-bubble.user .ai-bubble-body em { color: #bfdbfe; }
+
+/* Typing dots */
+.typing-indicator {
+    display: flex;
+    gap: 4px;
+    padding: 10px 14px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    border-top-left-radius: 4px;
+    width: fit-content;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.05);
+}
+.typing-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #94a3b8;
+    animation: typingBounce 1.2s infinite ease-in-out;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.18s; }
+.typing-dot:nth-child(3) { animation-delay: 0.36s; }
+@keyframes typingBounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+    40% { transform: translateY(-5px); opacity: 1; }
 }
 
-.advisor-line + .advisor-line {
-    margin-top: 8px;
+/* Quick chips */
+.ai-quick-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 14px;
+    border-top: 1px solid #f1f5f9;
+    background: #fff;
+    flex-shrink: 0;
+}
+.ai-chip {
+    border: 1px solid #dbe6f6;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #3152db;
+    background: #f0f4ff;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, transform 0.15s;
+    white-space: nowrap;
+}
+.ai-chip:hover {
+    background: #3152db;
+    color: #fff;
+    border-color: #3152db;
+    transform: translateY(-1px);
 }
 
+/* Input row */
 .advisor-controls {
     display: flex;
-    gap: 10px;
-    margin-top: 10px;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 14px 14px;
+    background: #fff;
+    border-top: 1px solid #f1f5f9;
+    flex-shrink: 0;
+}
+.advisor-input-wrap {
+    flex: 1;
+    position: relative;
+}
+.advisor-input-wrap input {
+    width: 100%;
+    border: 1.5px solid #dbe6f6;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 13.5px;
+    font-family: inherit;
+    background: #f8fafc;
+    color: #1e293b;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+.advisor-input-wrap input:focus {
+    border-color: #3b82f6;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+}
+.advisor-send-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #3152db, #4f7cff);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 12px rgba(49,82,219,0.3);
+}
+.advisor-send-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(49,82,219,0.38);
+}
+.advisor-send-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
 }
 
-.advisor-controls input {
-    flex: 1;
-    border: 1px solid #cfd9ea;
-    border-radius: 10px;
-    padding: 11px 12px;
+/* Spinner inside send button */
+@keyframes spin { to { transform: rotate(360deg); } }
+.send-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+
+/* Advisor line (legacy fallback) */
+.advisor-line { line-height: 1.55; }
+.advisor-line + .advisor-line { margin-top: 6px; }
+
+/* Course links in AI responses */
+.ai-course-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+.ai-course-link:hover {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
 }
 
 .btn-select {
@@ -513,7 +769,6 @@ if(search){
     color: #3152db;
     border: 1px solid #cddcff;
 }
-
 .btn-select.selected {
     background: #3152db;
     color: #fff;
@@ -559,27 +814,19 @@ if(search){
 
 @media (max-width: 700px) {
     .course-ai-helper {
-        left: 12px;
-        right: 12px;
-        bottom: 74px;
+        left: 10px;
+        right: 10px;
+        bottom: 80px;
         width: auto;
     }
-
-    .helper-header-row,
-    .advisor-controls {
-        flex-direction: column;
-    }
-
-    .helper-roadmap-btn,
-    .advisor-ask-btn {
-        width: 100%;
-    }
-
     .advisor-fab {
         left: 12px;
         bottom: 12px;
+        padding: 11px 14px;
     }
+    .fab-label { display: none; }
 }
+
 </style>
 </body>
 </html>

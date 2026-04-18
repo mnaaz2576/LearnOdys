@@ -57,18 +57,13 @@ async function fetchCourses(search = "") {
 
     try {
         const res = await fetch(url);
+        if (!res.ok) throw new Error("Network response was not ok");
+        
         const courses = await res.json();
-
-        // If no courses from API, use sample data
-        if(!courses || courses.length === 0) {
-            const sampleData = getCoursesFromSample(search);
-            displayCourses(sampleData);
-        } else {
-            displayCourses(courses);
-        }
+        displayCourses(courses);
     } catch(err) {
         console.log("Error fetching courses, using sample data:", err);
-        const sampleData = getCoursesFromSample(search);
+        const sampleData = getCoursesFromSample(search) || [];
         displayCourses(sampleData);
     }
 }
@@ -254,8 +249,15 @@ async function initCoursesPage() {
     }
 
     renderList();
-    renderAdvisorState(true);
-    toggleAdvisorWidget(false);
+    renderAdvisorState(); // Don't force reset, allow history restoration
+    
+    // Restore widget open state
+    const wasOpen = localStorage.getItem("advisorWidgetOpen") === "true";
+    if (wasOpen) {
+        toggleAdvisorWidget(true);
+    } else {
+        toggleAdvisorWidget(false);
+    }
 }
 
 if (document.readyState === "loading") {
@@ -320,8 +322,13 @@ function toggleAdvisorWidget(forceState) {
     if (!widget || !fab) return;
 
     advisorWidgetOpen = typeof forceState === "boolean" ? forceState : !advisorWidgetOpen;
-    widget.style.display = advisorWidgetOpen ? "block" : "none";
-    fab.textContent = advisorWidgetOpen ? "✖ Close AI" : "🤖 AI Help";
+    widget.style.display = advisorWidgetOpen ? "flex" : "none";
+    const label = fab.querySelector(".fab-label");
+    if (label) label.textContent = advisorWidgetOpen ? "Close" : "AI Guide";
+    fab.querySelector(".fab-icon").textContent = advisorWidgetOpen ? "✖" : "🤖";
+    
+    // Persist state
+    localStorage.setItem("advisorWidgetOpen", advisorWidgetOpen);
 }
 
 function normalizeCourseForList(course) {
@@ -334,17 +341,22 @@ function normalizeCourseForList(course) {
 
     let numericLevel = typeof course.level === "number" ? course.level : parseInt(course.level, 10);
     if (Number.isNaN(numericLevel)) {
-        numericLevel = levelMap[String(course.level || "").toLowerCase()] ?? 50;
+        numericLevel = levelMap[String(course.level || "").toLowerCase()] ?? 0;
     }
 
     const targetDays = 14;
     const dueDate = new Date(Date.now() + targetDays * 24 * 60 * 60 * 1000).toISOString();
+
+    // Preserve original difficulty string so dash.html can show Beginner/Intermediate/Advanced
+    const rawLevelStr = String(course.level || "").trim();
+    const difficultyLabel = isNaN(rawLevelStr) ? rawLevelStr : "";
 
     return {
         name: title,
         title,
         userEmail: localStorage.getItem("userEmail") || "guest",
         level: numericLevel,
+        difficultyLabel,
         platform: course.platform || "Online",
         duration: course.duration || "Self-paced",
         rating: course.rating || "N/A",
@@ -369,43 +381,52 @@ async function addToList(e, course) {
     const normalizedCourse = normalizeCourseForList(course);
     const exists = myList.some(item => (item.title || item.name).toLowerCase() === normalizedCourse.title.toLowerCase());
 
-    if (!exists) {
-        myList.push(normalizedCourse);
-        saveUserCourses();
-        renderList();
-        renderAdvisorState(true);
-
-        try {
-            const res = await fetch("http://localhost:5000/dash", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(normalizedCourse)
-            });
-            const data = await res.json().catch(() => null);
-            if (data?.course) {
-                myList = myList.map(item =>
-                    (item.title || item.name) === normalizedCourse.title ? { ...item, ...data.course } : item
-                );
-                saveUserCourses();
-            }
-
-            showToast(`Saved "${normalizedCourse.title}" to your dashboard.`, "success");
-        } catch (err) {
-            console.error("Error saving to backend:", err);
-            showToast(`"${normalizedCourse.title}" was added locally. Backend sync will retry when available.`, "warn");
-        }
-    } else {
+    if (exists) {
         showToast(`"${normalizedCourse.title}" is already in your dashboard.`, "info");
+        if (e?.target) {
+            e.target.innerText = "Saved ✓";
+            setTimeout(() => { e.target.innerText = "+ Add"; }, 1200);
+        }
+        showSavedListPanel();
+        return;
+    }
+
+    // ── Overlap check before adding ──
+    const overlapMsg = getRedundancyMessage(normalizedCourse, myList);
+    if (overlapMsg) {
+        showToast(`⚠️ Overlap detected: ${overlapMsg}`, "warn");
+        // Still allow the add — just warn
+    }
+
+    myList.push(normalizedCourse);
+    saveUserCourses();
+    renderList();
+    renderAdvisorState(true);
+
+    try {
+        const res = await fetch("http://localhost:5000/dash", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(normalizedCourse)
+        });
+        const data = await res.json().catch(() => null);
+        if (data?.course) {
+            myList = myList.map(item =>
+                (item.title || item.name) === normalizedCourse.title ? { ...item, ...data.course } : item
+            );
+            saveUserCourses();
+        }
+        if (!overlapMsg) {
+            showToast(`Saved "${normalizedCourse.title}" to your dashboard.`, "success");
+        }
+    } catch (err) {
+        console.error("Error saving to backend:", err);
+        showToast(`"${normalizedCourse.title}" was added locally. Backend sync will retry when available.`, "warn");
     }
 
     if (e?.target) {
-        const originalText = e.target.innerText;
-        e.target.innerText = exists ? "Saved ✓" : "Added ✓";
-        setTimeout(() => {
-            e.target.innerText = originalText;
-        }, 1200);
+        e.target.innerText = "Added ✓";
+        setTimeout(() => { e.target.innerText = "+ Add"; }, 1200);
     }
 
     showSavedListPanel();
@@ -518,7 +539,7 @@ function renderAdvisorState(resetOutput = false) {
     if (!selectedBox) return;
 
     if (!advisorSelectedCourses.length) {
-        selectedBox.innerHTML = `<span class="selected-course-chip empty">No courses selected for AI comparison yet.</span>`;
+        selectedBox.innerHTML = `<span class="selected-course-chip empty">No courses pinned — click <b>Interested</b> on any card to compare</span>`;
     } else {
         selectedBox.innerHTML = advisorSelectedCourses.map(course => `
             <span class="selected-course-chip">
@@ -528,9 +549,38 @@ function renderAdvisorState(resetOutput = false) {
         `).join("");
     }
 
-    if (output && (resetOutput || !output.dataset.mode)) {
+    if (output) {
+        // Restore persisted chat history on load
+        const savedChat = loadChatHistory();
+        if (savedChat && !resetOutput && output.dataset.mode !== "fresh") {
+            output.dataset.mode = "chat";
+            output.innerHTML = savedChat;
+            output.scrollTop = output.scrollHeight;
+        } else if (savedChat && resetOutput) {
+            // Even if resetOutput is true, if we have history and we're just initializing, keep it
+            output.dataset.mode = "chat";
+            output.innerHTML = savedChat;
+            output.scrollTop = output.scrollHeight;
+        } else if (resetOutput || !output.dataset.mode) {
+            const savedChatOnReset = loadChatHistory();
+            if (!savedChatOnReset) {
+                output.dataset.mode = "";
+                output.innerHTML = makeBotBubble(getPersonalizedAdvisorLines().join(" "));
+            } else {
+                output.dataset.mode = "chat";
+                output.innerHTML = savedChatOnReset;
+                output.scrollTop = output.scrollHeight;
+            }
+        }
+    }
+}
+
+function clearAdvisorChat() {
+    clearChatHistory();
+    const output = document.getElementById("advisorOutput");
+    if (output) {
         output.dataset.mode = "";
-        output.innerHTML = getPersonalizedAdvisorLines().map(line => `<div class="advisor-line">${escapeHtml(line)}</div>`).join("");
+        output.innerHTML = makeBotBubble(getPersonalizedAdvisorLines().join(" "));
     }
 }
 
@@ -572,10 +622,6 @@ function toggleCourseSelection(courseId) {
             alertBox.textContent = "";
         }
     } else {
-        if (advisorSelectedCourses.length >= 2) {
-            advisorSelectedCourses.shift();
-        }
-
         const redundancyMessage = getRedundancyMessage(normalizedCourse, advisorSelectedCourses);
         advisorSelectedCourses.push(normalizedCourse);
 
@@ -585,7 +631,9 @@ function toggleCourseSelection(courseId) {
                 alertBox.style.display = "block";
                 alertBox.textContent = redundancyMessage;
             }
-            alert(redundancyMessage);
+            if (typeof showToast === "function") {
+                showToast("Overlapping Warning: " + redundancyMessage, "warn");
+            }
         }
     }
 
@@ -622,20 +670,169 @@ function handleAdvisorEnter(event) {
     }
 }
 
+// ---- Bubble builders ----
+function makeUserBubble(text) {
+    const userLabel = (localStorage.getItem("userEmail") || "U")[0].toUpperCase();
+    return `<div class="ai-bubble user">
+        <div class="ai-bubble-avatar user-av">${escapeHtml(userLabel)}</div>
+        <div class="ai-bubble-body">${escapeHtml(text)}</div>
+    </div>`;
+}
+
+function makeBotBubble(html) {
+    return `<div class="ai-bubble bot">
+        <div class="ai-bubble-avatar">🤖</div>
+        <div class="ai-bubble-body">${html}</div>
+    </div>`;
+}
+
+function makeTypingBubble(id) {
+    return `<div class="ai-bubble bot" id="${id}">
+        <div class="ai-bubble-avatar">🤖</div>
+        <div class="typing-indicator">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        </div>
+    </div>`;
+}
+
+function setSendLoading(loading) {
+    const btn = document.getElementById("advisorSendBtn");
+    if (!btn) return;
+    btn.disabled = loading;
+    btn.innerHTML = loading
+        ? `<div class="send-spinner"></div>`
+        : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
+}
+
+function sendQuickChip(text) {
+    const input = document.getElementById("advisorInput");
+    if (input) input.value = text;
+    askCourseAdvisor();
+}
+
+// ---- Chat History (localStorage — persists across navigation) ----
+function getChatStorageKey() {
+    const email = localStorage.getItem("userEmail") || "guest";
+    return `advisorChat_${email.toLowerCase()}`;
+}
+
+function saveChatHistory(html) {
+    try { localStorage.setItem(getChatStorageKey(), html); } catch(e) {}
+}
+
+function loadChatHistory() {
+    try { return localStorage.getItem(getChatStorageKey()) || ""; } catch(e) { return ""; }
+}
+
+function clearChatHistory() {
+    try { localStorage.removeItem(getChatStorageKey()); } catch(e) {}
+}
+
+// ---- Rich AI Response Formatter ----
+function linkifyCourseNames(text) {
+    // Collect all known course titles from the current page cards
+    const courseCards = [];
+    document.querySelectorAll(".course-card h3").forEach(h => {
+        const t = h.textContent.trim();
+        if (t) courseCards.push(t);
+    });
+    // Also include sample courses
+    const allSampleTitles = [];
+    if (typeof sampleCourses !== "undefined") {
+        Object.values(sampleCourses).forEach(arr => arr.forEach(c => allSampleTitles.push(c.title)));
+    }
+    const allTitles = [...new Set([...courseCards, ...allSampleTitles])];
+    let result = text;
+    allTitles.forEach(title => {
+        const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(?<![\\w>])(${escaped})(?![\\w<])`, 'gi');
+        result = result.replace(regex, (match) => {
+            const safeMatch = match.replace(/'/g, "\\'");
+            return `<a href="javascript:void(0)" class="ai-course-link" onclick="handleCourseLinkClick(event, '${escapeHtml(safeMatch)}')" title="Search for ${escapeHtml(match)}">${escapeHtml(match)} ↗</a>`;
+        });
+    });
+    return result;
+}
+
+function handleCourseLinkClick(event, courseName) {
+    if (event) event.preventDefault();
+    
+    // Update the visual search input (optional but good for feedback)
+    const searchFormInput = document.querySelector('input[name="search"]') || document.querySelector('.search-bar input');
+    if (searchFormInput) searchFormInput.value = courseName;
+
+    // Trigger search
+    fetchCourses(courseName);
+
+    // Update URL without reload for bookmarking/back button consistency
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.set('search', courseName);
+    window.history.pushState({ search: courseName }, '', newUrl);
+    
+    showToast(`Searching for "${courseName}"...`, "info");
+}
+
 function formatAdvisorResponse(text) {
-    return String(text || "")
-        .split("\n")
-        .map(line => line.trim())
-        .filter(Boolean)
-        .map(line => `<div class="advisor-line">${escapeHtml(line.replace(/^[•-]\s*/, ""))}</div>`)
-        .join("");
+    if (!text) return "";
+    let html = String(text)
+        // Bold: **text** or __text__
+        .replace(/\*\*(.+?)\*\*/g, (_, m) => `<strong>${escapeHtml(m)}</strong>`)
+        .replace(/__(.+?)__/g, (_, m) => `<strong>${escapeHtml(m)}</strong>`)
+        // Italic: *text*
+        .replace(/\*([^*]+)\*/g, (_, m) => `<em>${escapeHtml(m)}</em>`);
+
+    const lines = html.split("\n");
+    const parts = [];
+    let inList = false;
+
+    lines.forEach(raw => {
+        const line = raw.trim();
+        if (!line) {
+            if (inList) { parts.push("</ul>"); inList = false; }
+            return;
+        }
+        // Numbered list: 1. or 1)
+        if (/^\d+[.)\s]/.test(line)) {
+            if (inList) { parts.push("</ul>"); inList = false; }
+            const content = line.replace(/^\d+[.)\s]+/, "");
+            parts.push(`<div class="advisor-line" style="margin:5px 0;"><strong style="color:#3b82f6;">${line.match(/^(\d+)/)[1]}.</strong> ${linkifyCourseNames(content)}</div>`);
+        }
+        // Bullet list: • - *
+        else if (/^[•\-\*]\s/.test(line)) {
+            if (!inList) { parts.push("<ul style='margin:6px 0 6px 16px; padding:0;'>"); inList = true; }
+            const content = line.replace(/^[•\-\*]\s+/, "");
+            parts.push(`<li style="margin:3px 0; color:#334155;">${linkifyCourseNames(content)}</li>`);
+        }
+        // Heading detected (line ends with : and is short)
+        else if (line.endsWith(":") && line.length < 60) {
+            if (inList) { parts.push("</ul>"); inList = false; }
+            parts.push(`<div class="advisor-line" style="font-weight:700; color:#1e3a8a; margin-top:8px;">${linkifyCourseNames(line)}</div>`);
+        }
+        // Normal line
+        else {
+            if (inList) { parts.push("</ul>"); inList = false; }
+            parts.push(`<div class="advisor-line" style="margin:4px 0; line-height:1.6;">${linkifyCourseNames(line)}</div>`);
+        }
+    });
+    if (inList) parts.push("</ul>");
+    return parts.join("");
 }
 
 function buildAdvisorContext() {
     const userLabel = localStorage.getItem("userName") || localStorage.getItem("userEmail") || "learner";
-    const courses = advisorSelectedCourses.length ? advisorSelectedCourses : myList.slice(0, 5);
-    if (courses.length) {
-        return `Learner: ${userLabel}\nSaved/selected courses:\n${courses.map((course, index) => `${index + 1}. ${course.title} — ${course.platform || "Online"}, completion ${course.level}%`).join("\n")}`;
+    
+    // If user has manually selected courses for the AI to compare (interested list)
+    if (advisorSelectedCourses.length) {
+        return `Learner: ${userLabel}\nInterested courses (not yet started):\n` + 
+            advisorSelectedCourses.map((c, i) => `${i + 1}. ${c.title} — ${c.platform || "Online"} (Looking for advice on this)`).join("\n");
+    }
+
+    // Fallback to active dashboard courses (myList)
+    if (myList.length) {
+        return `Learner: ${userLabel}\nActive Dashboard Courses:\n` + 
+            myList.slice(0, 5).map((c, i) => `${i + 1}. ${c.title} — ${c.platform || "Online"}, progress: ${c.level}% complete`).join("\n");
     }
 
     const params = new URLSearchParams(window.location.search);
@@ -647,17 +844,50 @@ async function askCourseAdvisor() {
     const output = document.getElementById("advisorOutput");
     if (!output) return;
 
-    const userIssue = (input?.value || "").trim() || "Help me choose the best course and tell me what to do next.";
-    output.dataset.mode = "custom";
-    output.innerHTML = `<div class="advisor-line">Thinking through your course issue...</div>`;
+    const userIssue = (input?.value || "").trim();
+    const effectiveIssue = userIssue || "Help me choose the best course and tell me what to do next.";
+
+    if (output.dataset.mode !== "chat") {
+        output.dataset.mode = "chat";
+        output.innerHTML = "";
+    }
+
+    if (userIssue) {
+        output.innerHTML += makeUserBubble(userIssue);
+    }
+
+    const loadingId = "typing-" + Date.now();
+    output.innerHTML += makeTypingBubble(loadingId);
+    output.scrollTop = output.scrollHeight;
+    if (input) input.value = "";
+    setSendLoading(true);
 
     try {
-        const prompt = `You are the LearnOdys course support agent. Help solve the learner's issue in a short and practical way. If selected courses overlap, say so clearly. If roadmap help is needed, give at most 4 short steps. Use plain language with short lines only.\n\nSelected course context:\n${buildAdvisorContext()}\n\nUser issue: ${userIssue}`;
+        const prompt = `You are a conversational AI Course Assistant for LearnOdys. 
+Strictly follow these context rules:
+1. Interested courses have 0% progress and are not started yet.
+2. Active Dashboard courses have progress percentages.
+Do NOT hallucinate progress for interested courses.
+
+Current Context:
+${buildAdvisorContext()}
+
+User Message: "${effectiveIssue}"
+
+Respond naturally and directly to the user. If they ask about interested courses, guide them on value and fit. If they ask about active courses, guide them on completion. Keep your response brief, friendly, and practical. When suggesting courses, use exact titles.`;
         const result = await askCourseAI(prompt);
-        output.innerHTML = formatAdvisorResponse(result);
+        document.getElementById(loadingId)?.remove();
+        output.innerHTML += makeBotBubble(formatAdvisorResponse(result));
+        output.scrollTop = output.scrollHeight;
+        saveChatHistory(output.innerHTML);
     } catch (err) {
         console.error("Error asking course advisor:", err);
-        output.innerHTML = `<div class="advisor-line">Try this next: start with the course that matches your current level best, finish one module, then compare again.</div>`;
+        document.getElementById(loadingId)?.remove();
+        output.innerHTML += makeBotBubble(`<span style="color:#b91c1c;">Couldn't reach the AI right now. Try starting with the course that best matches your current level.</span>`);
+        output.scrollTop = output.scrollHeight;
+        saveChatHistory(output.innerHTML);
+    } finally {
+        setSendLoading(false);
     }
 }
 
@@ -665,21 +895,44 @@ async function generateCourseRoadmap() {
     const output = document.getElementById("advisorOutput");
     if (!output) return;
 
-    output.dataset.mode = "custom";
-    output.innerHTML = `<div class="advisor-line">Creating a short roadmap from your selected courses...</div>`;
+    if (output.dataset.mode !== "chat") {
+        output.dataset.mode = "chat";
+        output.innerHTML = "";
+    }
+
+    output.innerHTML += makeUserBubble("Generate Roadmap");
+
+    const loadingId = "typing-roadmap-" + Date.now();
+    output.innerHTML += makeTypingBubble(loadingId);
+    output.scrollTop = output.scrollHeight;
+    setSendLoading(true);
 
     try {
-        const prompt = `Create a short course roadmap for this learner. Base it on the selected courses/context below. Return 4 short steps maximum. Keep it actionable, not overly informative.\n\nCourse context:\n${buildAdvisorContext()}`;
+        const prompt = `Create a short course roadmap for this learner. 
+Notice: Interested courses are not started yet (0% progress). Active courses have progress.
+Base your roadmap on the context below. Return 4 short steps maximum. Keep it actionable. Use exact titles.
+
+Course context:
+${buildAdvisorContext()}`;
         const result = await askCourseAI(prompt);
-        output.innerHTML = formatAdvisorResponse(result);
+        document.getElementById(loadingId)?.remove();
+        output.innerHTML += makeBotBubble(formatAdvisorResponse(result));
+        output.scrollTop = output.scrollHeight;
+        saveChatHistory(output.innerHTML);
     } catch (err) {
         console.error("Error generating course roadmap:", err);
-        output.innerHTML = `
-            <div class="advisor-line"><strong>1.</strong> Start with the most beginner-friendly course first.</div>
-            <div class="advisor-line"><strong>2.</strong> Finish one core module and practice it immediately.</div>
-            <div class="advisor-line"><strong>3.</strong> Skip overlapping content and move to the more advanced course next.</div>
-            <div class="advisor-line"><strong>4.</strong> Build one mini project to lock in your understanding.</div>
-        `;
+        document.getElementById(loadingId)?.remove();
+        const fallback = [
+            "1. Start with the most beginner-friendly course first.",
+            "2. Finish one core module and practice it immediately.",
+            "3. Skip overlapping content and move to the more advanced course next.",
+            "4. Build one mini project to lock in your understanding."
+        ].map(line => `<div class="advisor-line" style="margin:5px 0;">${line}</div>`).join("");
+        output.innerHTML += makeBotBubble(fallback);
+        output.scrollTop = output.scrollHeight;
+        saveChatHistory(output.innerHTML);
+    } finally {
+        setSendLoading(false);
     }
 }
 

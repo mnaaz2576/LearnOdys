@@ -134,6 +134,140 @@ body{
 .hidden{
   display:none;
 }
+
+/* NEW STYLES FOR PREMIUM TIMELINE AND INTERESTED COURSES */
+.timeline-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.timeline-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e1;
+}
+
+.timeline-card.passed {
+  border: 1px solid #16a34a;
+  background: #f0fdf4;
+}
+
+.timeline-card.passed .timeline-status {
+  color: #15803d;
+  background: #dcfce7;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-block;
+  margin-top: 5px;
+}
+
+.timeline-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.timeline-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  background: #f8fafc;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.timeline-label {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.timeline-input {
+  margin-top: 4px;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  background: white;
+  color: #334155;
+  transition: border-color 0.2s ease;
+}
+
+.timeline-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.btn-save-plan {
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  height: 35px;
+}
+.btn-save-plan:hover {
+  background: #1d4ed8;
+}
+
+.interested-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.interested-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.interested-card h4 {
+  margin: 0 0 6px 0;
+  font-size: 15px;
+  color: #1f2937;
+}
+
+.remove-btn {
+  margin-top: 10px;
+  padding: 6px 12px;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background 0.2s;
+}
+
+.remove-btn:hover {
+  background: #fca5a5;
+}
 </style>
 </head>
 
@@ -270,6 +404,47 @@ function setSavedCourses(courses) {
   localStorage.setItem("courses", JSON.stringify(courses));
 }
 
+// Converts a stored course level (number OR string) to a human-readable difficulty label
+function getDifficultyLabel(course) {
+  // If the course has a string level like "Beginner" / "Intermediate" / "Advanced" stored, prefer it
+  const raw = String(course.level || course.difficultyLabel || "").trim();
+  const lower = raw.toLowerCase();
+  if (lower === "beginner")     return "🟢 Beginner";
+  if (lower === "intermediate") return "🟡 Intermediate";
+  if (lower === "advanced")     return "🔴 Advanced";
+
+  // Numeric mapping (stored from normalizeCourseForList)
+  const num = parseFloat(raw);
+  if (!isNaN(num)) {
+    if (num <= 33)  return "🟢 Beginner";
+    if (num <= 66)  return "🟡 Intermediate";
+    return "🔴 Advanced";
+  }
+  return raw || "Unknown";
+}
+
+// Parses duration strings like "4 months", "8 weeks", "12 hours", "3 days" -> days (number)
+function parseDurationToDays(durationStr) {
+  if (!durationStr || typeof durationStr !== "string") return null;
+  const s = durationStr.toLowerCase().trim();
+
+  // Try to extract a leading number (supports decimals and ranges like "3-4" -> takes first)
+  const numMatch = s.match(/(\d+(?:\.\d+)?)/); 
+  if (!numMatch) return null;
+  const num = parseFloat(numMatch[1]);
+
+  if (s.includes("year"))   return Math.round(num * 365);
+  if (s.includes("month"))  return Math.round(num * 30);
+  if (s.includes("week"))   return Math.round(num * 7);
+  if (s.includes("day"))    return Math.round(num);
+  if (s.includes("hour"))   {
+    // Assume studying ~1 hr/day -> 1 hr = 1 day, but cap at a reasonable spread
+    // e.g. "12 hours" means ~12 days of 1hr/day study
+    return Math.max(1, Math.round(num));
+  }
+  return null;
+}
+
 function getDefaultDueDate(days = 14) {
   const date = new Date();
   date.setDate(date.getDate() + Math.max(1, Number(days) || 14));
@@ -308,10 +483,21 @@ function normalizeDashboardCourse(course) {
     level = levelMap[String(course.level || "").toLowerCase()] ?? 50;
   }
 
+  // Determine targetDays: prefer explicit targetDays, then parse from duration string
   let targetDays = parseInt(course.targetDays, 10);
+  let durationDerived = false;
   if (isNaN(targetDays) || targetDays <= 0) {
-    targetDays = 14;
+    const fromDuration = parseDurationToDays(course.duration);
+    if (fromDuration && fromDuration > 0) {
+      targetDays = fromDuration;
+      durationDerived = true;
+    } else {
+      targetDays = 14;
+    }
   }
+
+  // Only auto-set dueDate from duration if the course doesn't already have one saved
+  const dueDate = course.dueDate || getDefaultDueDate(targetDays);
 
   return {
     ...course,
@@ -319,7 +505,8 @@ function normalizeDashboardCourse(course) {
     title,
     level,
     targetDays,
-    dueDate: course.dueDate || getDefaultDueDate(targetDays),
+    durationDerived, // flag: true if due date was computed from duration field
+    dueDate,
     reminderEnabled: course.reminderEnabled !== false,
     reminderFrequency: course.reminderFrequency || "daily",
     reminderTime: course.reminderTime || "19:00",
@@ -337,6 +524,14 @@ async function loadCourses(forceRefresh = false){
   dashboardCourseCache = courses;
   setSavedCourses(courses);
 
+  let interestedList = [];
+  if (userEmail && userEmail !== "guest") {
+      try {
+          const res = await fetch(`http://localhost:5000/interested?userEmail=${encodeURIComponent(userEmail)}`);
+          if (res.ok) interestedList = await res.json();
+      } catch(e) { console.error("Error loading interested list:", e); }
+  }
+
   const list = document.getElementById("courseList");
   const savedListBox = document.getElementById("listTab");
   list.innerHTML = "";
@@ -348,40 +543,89 @@ async function loadCourses(forceRefresh = false){
     return true;
   });
 
-  if (!filtered.length) {
+  if (!filtered.length && !interestedList.length) {
     list.innerHTML = `<p>No saved courses yet. Add courses from the course cards to see them here.</p>`;
     savedListBox.innerHTML = `<h3>Your Lists</h3><p>No lists yet 😅</p>`;
     return;
   }
 
-  savedListBox.innerHTML = `
-    <h3>Your Lists</h3>
+  const todayStr = getTodayStamp();
+
+  let listsHTML = `
+    <h3>Your Saved Timeline</h3>
     <div id="dailyQuizWidget" style="margin-bottom:16px;"></div>
     <div id="dashboardReminderPopup" style="display:none; margin-bottom:14px; padding:12px; border-radius:10px; background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8;"></div>
-    ${courses.map((c, index) => `
-      <div class="course" style="border:1px solid #e5e7eb; border-radius:12px; padding:14px; margin-bottom:12px;">
-        <strong>${c.title}</strong><br>
-        <small>${c.platform || "Online"} • ${c.level}% complete • Finish by <strong>${formatDueDate(c.dueDate)}</strong></small>
-        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; align-items:center;">
-          <label>Plan days
-            <input type="number" min="1" max="120" id="targetDays${index}" value="${c.targetDays}" style="width:74px; padding:6px; margin-left:6px;">
-          </label>
-          <label>Reminder
-            <select id="reminderFrequency${index}" style="padding:6px; margin-left:6px;">
-              <option value="daily" ${c.reminderFrequency === "daily" ? "selected" : ""}>Daily</option>
-              <option value="twodays" ${c.reminderFrequency === "twodays" ? "selected" : ""}>Every 2 days</option>
-              <option value="weekly" ${c.reminderFrequency === "weekly" ? "selected" : ""}>Weekly</option>
-            </select>
-          </label>
-          <label>Time
-            <input type="time" id="reminderTime${index}" value="${c.reminderTime || "19:00"}" style="padding:6px; margin-left:6px;">
-          </label>
-          <button class="btn add-btn" onclick="saveTimelinePlan(${index})">Save plan</button>
-        </div>
-        <div style="margin-top:8px; color:#475569; font-size:13px;">Reminder cadence: ${getReminderLabel(c.reminderFrequency)} at ${c.reminderTime || "19:00"}</div>
-      </div>
-    `).join("")}
   `;
+
+  if (courses.length > 0) {
+      listsHTML += courses.map((c, index) => {
+          const courseDue = c.dueDate ? c.dueDate.split("T")[0] : "";
+          const isPassed = courseDue && courseDue <= todayStr;
+
+          // Build duration hint label
+          let durationHint = "";
+          if (c.duration && c.duration !== "Self-paced" && c.duration !== "Self-Paced") {
+            const derivedDays = parseDurationToDays(c.duration);
+            if (derivedDays) {
+              const estDate = new Date();
+              estDate.setDate(estDate.getDate() + derivedDays);
+              const estLabel = estDate.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+              durationHint = `<div style="font-size:11px; color:#7c3aed; margin-top:3px; display:flex; align-items:center; gap:4px;">
+                <span style="background:#f5f3ff; border:1px solid #ddd6fe; padding:2px 7px; border-radius:10px;">⏱ Based on <strong>${escapeHtml(c.duration)}</strong> → est. finish <strong>${estLabel}</strong></span>
+              </div>`;
+            }
+          }
+
+          return `
+          <div class="timeline-card ${isPassed ? 'passed' : ''}">
+            <div class="timeline-card-header">
+              <div>
+                <strong style="font-size:15px; color:#1e293b;">${escapeHtml(c.title)}</strong><br>
+                <small style="color:#64748b;">${escapeHtml(c.platform || "Online")} • ${c.level}% complete${c.duration && c.duration !== 'Self-paced' ? ` • ${escapeHtml(c.duration)}` : ""}</small>
+                ${isPassed ? `<div class="timeline-status">✓ Deadline Reached</div>` : `<div style="font-size:12px; color:#3b82f6; margin-top:4px; font-weight:500;">Finish by ${formatDueDate(c.dueDate)}</div>`}
+              </div>
+            </div>
+            <div class="timeline-controls">
+              <label class="timeline-label">Tentative Finish Date
+                <input type="date" id="dueDateInput${index}" value="${courseDue}" class="timeline-input">
+                ${durationHint}
+              </label>
+              <label class="timeline-label">Reminder
+                <select id="reminderFrequency${index}" class="timeline-input">
+                  <option value="daily" ${c.reminderFrequency === "daily" ? "selected" : ""}>Daily</option>
+                  <option value="twodays" ${c.reminderFrequency === "twodays" ? "selected" : ""}>Every 2 days</option>
+                  <option value="weekly" ${c.reminderFrequency === "weekly" ? "selected" : ""}>Weekly</option>
+                </select>
+              </label>
+              <label class="timeline-label">Time
+                <input type="time" id="reminderTime${index}" value="${c.reminderTime || "19:00"}" class="timeline-input">
+              </label>
+              <button class="btn-save-plan" onclick="saveTimelinePlan(${index})">Save Goal</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+  } else {
+      listsHTML += `<p style="color:#64748b; font-size:13px;">No timeline courses tracked.</p>`;
+  }
+
+  listsHTML += `<h3 style="margin-top:30px; border-top:1px solid #e2e8f0; padding-top:20px;">Interested Courses</h3>`;
+  
+  if (interestedList.length > 0) {
+      listsHTML += `<div class="interested-grid">` + interestedList.map((ic, i) => `
+        <div class="interested-card">
+          <div>
+            <h4>${ic.title}</h4>
+            <small style="color:#6b7280;">${escapeHtml(getDifficultyLabel(ic))} • ${escapeHtml(ic.duration || "Self-Paced")} • ${escapeHtml(ic.platform || "Online")}</small>
+          </div>
+          <button class="remove-btn" onclick="removeInterested('${escapeHtml(ic.title)}')">Remove</button>
+        </div>
+      `).join("") + `</div>`;
+  } else {
+      listsHTML += `<p style="color:#64748b; font-size:13px;">You have not shortlisted any courses as interested yet.</p>`;
+  }
+
+  savedListBox.innerHTML = listsHTML;
 
   renderDailyQuizWidget(courses);
   checkReminderAlerts(courses);
@@ -446,13 +690,12 @@ async function saveTimelinePlan(index) {
   const course = dashboardCourseCache[index];
   if (!course) return;
 
-  const targetDays = Math.max(1, parseInt(document.getElementById(`targetDays${index}`)?.value, 10) || 14);
+  const newDueDate = document.getElementById(`dueDateInput${index}`)?.value;
   const reminderFrequency = document.getElementById(`reminderFrequency${index}`)?.value || "daily";
   const reminderTime = document.getElementById(`reminderTime${index}`)?.value || "19:00";
-  const dueDate = getDefaultDueDate(targetDays);
+  const dueDate = newDueDate ? new Date(newDueDate).toISOString() : getDefaultDueDate(course.targetDays || 14);
 
   Object.assign(course, {
-    targetDays,
     dueDate,
     reminderEnabled: true,
     reminderFrequency,
@@ -469,7 +712,7 @@ async function saveTimelinePlan(index) {
         courseId: course._id || "",
         userEmail: course.userEmail || userEmail || "guest",
         title: course.title,
-        targetDays,
+        targetDays: course.targetDays || 14,
         dueDate,
         reminderEnabled: true,
         reminderFrequency,
@@ -484,6 +727,26 @@ async function saveTimelinePlan(index) {
 
   loadCourses(false);
 }
+
+async function removeInterested(title) {
+    if (!userEmail || userEmail === "guest") return;
+    try {
+        const res = await fetch(`http://localhost:5000/interested?userEmail=${encodeURIComponent(userEmail)}`);
+        let list = [];
+        if (res.ok) list = await res.json();
+        list = list.filter(c => c.title !== title && c.name !== title);
+        await fetch("http://localhost:5000/interested", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userEmail, courses: list })
+        });
+        showDashboardPopup(`Removed <strong>${title}</strong> from Interested Courses.`, "info");
+        loadCourses(false);
+    } catch (e) {
+        console.error("Failed to remove interested course", e);
+    }
+}
+
 
 function shouldShowReminder(course) {
   if (!course?.reminderEnabled || Number(course.level) >= 100) return false;
