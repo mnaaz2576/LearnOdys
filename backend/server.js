@@ -2,12 +2,15 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
-const axios = require("axios"); // ✅ ADD THIS
+const axios = require("axios");
+const Groq = require("groq-sdk"); // ✅ USING OFFICIAL SDK
 require("dotenv").config();
 
 const User = require("./models/user");
 const Course = require("./models/Course");
 const getCourses = require("./utils/scraper");
+const { sendWelcomeEmail } = require("./services/emailService"); // ✅ ADD THIS
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -43,8 +46,12 @@ app.post("/signup", async (req, res) => {
     const hashed = await bcrypt.hash(password, 10);
     await User.create({ name, email, password: hashed });
 
+    // Send Welcome Email
+    await sendWelcomeEmail(email, name || "Learner");
+
     res.json({ message: "Signup successful" });
-  } catch {
+  } catch (err) {
+    console.error("Signup error:", err);
     res.json({ message: "Server error" });
   }
 });
@@ -111,7 +118,7 @@ app.post("/dash", async (req, res) => {
     
     const exists = user.selectedCourses.find(c => c.title === courseData.title || c.name === courseData.name);
     if (!exists) {
-        user.selectedCourses.push({ ...courseData });
+        user.selectedCourses.push({ ...courseData, savedAt: new Date() });
         user.markModified('selectedCourses');
         await user.save();
     }
@@ -192,7 +199,8 @@ app.post("/interested", async (req, res) => {
     const user = await User.findOne({ email: userEmail });
     if (!user) return res.status(404).json({ error: "User not found" });
     
-    user.interestedCourses = courses;
+    const coursesWithTime = (courses || []).map(c => ({ ...c, savedAt: new Date() }));
+    user.interestedCourses = coursesWithTime;
     user.markModified('interestedCourses');
     await user.save();
     res.json({ message: "Updated interested courses" });
@@ -204,42 +212,49 @@ app.post("/interested", async (req, res) => {
 // ======================
 // 🔥 GROQ AI FUNCTION (FIXED)
 // ======================
+// Initialize Groq Client
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
 async function askGroq(prompt, dbCourses = []) {
   try {
-    let systemMessage = "You are a conversational AI Course Assistant for LearnOdys. Respond directly and naturally to the user's specific query. CRITICAL RULE: If the user asks for course recommendations, study paths, or roadmaps, you MUST strictly ONLY use courses from the 'Available Database Courses' list below. Provide their EXACT literal titles so the user can search them. DO NOT invent or recommend any external courses. If they just ask a simple question, greet them or answer it conversationally.";
+    let systemMessage = "You are an expert AI Learning Mentor for LearnOdys. Respond naturally, helpfully, and accurately. \n\n" +
+                        "GUIDELINES:\n" +
+                        "- Always respond in the SAME language as the user's latest message.\n" +
+                        "- Talk naturally first. Only provide a structured roadmap or suggest courses if the user explicitly asks for them.\n" +
+                        "- If the user asks for a 'roadmap' or 'path', provide a structured step-by-step guide.\n" +
+                        "- Use bold text for any course titles you mention.";
     
-    if (dbCourses.length > 0) {
-      systemMessage += "\n\nAvailable Database Courses:\n" + dbCourses.map(c => `- ${c.title} (Platform: ${c.platform}, Level: ${c.level || "Any"})`).join("\n");
+    // Extract the text to check for intent
+    const textToCheck = Array.isArray(prompt) 
+        ? prompt[prompt.length - 1].content 
+        : prompt;
+
+    const isRoadmapRequest = /roadmap|path|plan|guide/i.test(textToCheck);
+    const isRecommendationRequest = /suggest|recommend|find courses|what courses|give me courses/i.test(textToCheck);
+
+    if (dbCourses.length > 0 && (isRecommendationRequest || isRoadmapRequest)) {
+      systemMessage += "\n\nAvailable Database Courses:\n" + dbCourses.map(c => `- ${c.title} (Platform: ${c.platform})`).join("\n");
     }
 
-    const response = await axios.post(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        model: "llama-3.1-8b-instant",
-        temperature: 0,
-        messages: [
-          {
-            role: "system",
-            content: systemMessage
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ]
-      },
-      {
-        headers: {
-          "Authorization": `Bearer ${process.env.GROQ_API_KEY}`, // ✅ FIXED
-          "Content-Type": "application/json"
-        }
-      }
-    );
+    const messages = [
+      { role: "system", content: systemMessage },
+      ...(Array.isArray(prompt) ? prompt : [{ role: "user", content: prompt }])
+    ];
 
-    return response.data.choices[0].message.content;
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      temperature: 0.1,
+      messages: messages
+    });
+
+    return completion.choices[0]?.message?.content || "No response generated";
 
   } catch (err) {
-    console.error("Groq Error:", err.response?.data || err.message);
+    console.error("Groq Error Details:", err);
+    console.error("Groq Error:", err.message);
+    if (err.message.includes("ENOTFOUND")) {
+        return "System error: Unable to connect to the AI service (DNS Error). Please check your internet connection.";
+    }
     return "Error generating response";
   }
 }
@@ -255,24 +270,34 @@ app.post("/api/ai/ask", async (req, res) => {
       return res.status(400).json({ answer: "Prompt required" });
     }
 
-    // Attempt to extract meaningful keywords to query the DB
-    const words = prompt.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
-    const stopWords = new Set(["suggest", "course", "courses", "best", "learner", "current", "topic", "search", "want", "learn", "how", "what", "can", "you", "give", "me", "some", "the", "for", "and", "help", "with", "this", "that", "from"]);
-    const keywords = words.filter(w => !stopWords.has(w));
+    // Extract the text to check for intent
+    const textToCheck = prompt; // In the route, prompt is the raw user string from req.body.prompt
+
+    const isRecommendationRequest = /suggest|recommend|find courses|what courses|give me courses|roadmap|path/i.test(textToCheck);
 
     let dbCourses = [];
-    if (keywords.length > 0) {
-        dbCourses = await Course.find({
-            $or: keywords.map(kw => ({ title: { $regex: kw, $options: "i" } }))
-        }).limit(60);
-    } 
-    
-    // Fallback context: fetch popular/random if none matched keywords
-    if (dbCourses.length === 0) {
-        dbCourses = await Course.find().limit(40);
+    if (isRecommendationRequest) {
+        // Only do keyword extraction and DB search if it's a recommendation request
+        const words = textToCheck.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+        const stopWords = new Set(["suggest", "course", "courses", "best", "want", "learn", "how", "what", "give", "me", "some", "the", "for", "and", "help", "roadmap", "path"]);
+        const keywords = words.filter(w => !stopWords.has(w));
+
+        if (keywords.length > 0) {
+            dbCourses = await Course.find({
+                $or: keywords.map(kw => ({ title: { $regex: kw, $options: "i" } }))
+            }).limit(30);
+        }
+        
+        if (dbCourses.length === 0) {
+            dbCourses = await Course.find().limit(10);
+        }
     }
 
-    const answer = await askGroq(prompt, dbCourses);
+    // Build messages array with history
+    const history = req.body.history || [];
+    const messages = [...history, { role: "user", content: prompt }];
+
+    const answer = await askGroq(messages, dbCourses);
     res.json({ answer });
 
   } catch {
@@ -281,8 +306,41 @@ app.post("/api/ai/ask", async (req, res) => {
 });
 
 // ======================
+// TEST EMAIL ROUTE
+// ======================
+app.get("/api/test-email", async (req, res) => {
+  const { email } = req.query;
+  if (!email) return res.status(400).json({ error: "Email required" });
+
+  try {
+    const { sendEmail } = require("./services/emailService");
+    await sendEmail(email, "Test Email from LearnOdys", "<h1>It Works!</h1><p>Your email system is now set up correctly.</p>");
+    res.json({ message: "Test email sent successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Trigger full daily process manually
+app.get("/api/trigger-daily-tasks", async (req, res) => {
+  try {
+    const { runDailyTasks } = require("./services/cronService");
+    await runDailyTasks();
+    res.json({ message: "Daily process triggered and running in background" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ======================
 // START SERVER
 // ======================
+// ======================
+// CRON SERVICES (Email Reminders & Quizzes)
+// ======================
+const { startCronJobs } = require("./services/cronService");
+startCronJobs();
+
 app.listen(PORT, () =>
   console.log(`🚀 Server running on http://localhost:${PORT}`)
 );

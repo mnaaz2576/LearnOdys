@@ -1,193 +1,298 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Learnodys - Curate Your Learning Journey</title>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700&display=swap" rel="stylesheet">
-<style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LearnOdys | AI Learning Curator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #010410;
+            --blue-glow: #0ea5e9;
+            --white: #ffffff;
+            --light-blue: #7dd3fc;
+        }
 
-body {
-    font-family: 'Baloo 2', cursive;
-    overflow-x: hidden;
-    background: #0a192f;
-}
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg);
+            font-family: 'Outfit', sans-serif;
+        }
 
-/* Logo fixed at top-left */
-.logo {
-    position: fixed;
-    top: 20px;
-    left: 20px;
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #0ea5e9;
-    font-family: 'Baloo 2', cursive;
-    z-index: 10;
-}
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(14, 165, 233, 0.15) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(14, 165, 233, 0.15) 1px, transparent 1px);
+            background-size: 60px 60px;
+            z-index: 0;
+        }
 
-.hero {
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    text-align: center;
-    color: white;
-    background-image: url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');
-    background-size: cover;
-    background-position: center;
-}
+        .grid-bg::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(14, 165, 233, 0.1) 0%, var(--bg) 85%);
+            z-index: 1;
+        }
 
-.hero::before {
-    content: '';
-    position: absolute;
-    top:0; left:0; right:0; bottom:0;
-    background: rgba(10, 25, 47, 0.6);
-    z-index:1;
-}
+        #connectionCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
 
-/* Hero card with neutral, opaque background */
-.hero-card {
-    position: relative;
-    z-index:2;
-    width: 600px;
-    max-width: 90%;
-    padding: 3rem 2rem;
-    border-radius: 20px;
-    text-align: center;
-    color: white;
-    background: linear-gradient(135deg, #4b4b5c, #60607a); /* dull neutral gradient */
-    box-shadow: 0 15px 50px rgba(0,0,0,0.5);
-    opacity: 1; /* fully opaque */
-}
+        .bubble-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 2;
+            pointer-events: none;
+        }
 
-/* Animate words individually */
-.hero-card h1 {
-    font-size: clamp(2rem, 4vw, 3rem);
-    font-weight: 700;
-    margin-bottom: 1.5rem;
-    text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
-    overflow: hidden;
-}
+        .subject-pop {
+            position: absolute;
+            color: var(--light-blue);
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: rgba(1, 4, 16, 0.95);
+            padding: 8px 16px;
+            border: 1px solid rgba(14, 165, 233, 0.4);
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.2);
+            opacity: 0;
+            animation: bouncePop 6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
 
-.hero-card h1 span {
-    opacity: 0;
-    display: inline-block;
-    animation: fadeInWord 1s forwards;
-}
+        @keyframes bouncePop {
+            0% {
+                transform: scale(0) translateY(20px);
+                opacity: 0;
+            }
 
-.hero-card h1 span:nth-child(1) { animation-delay: 0.3s; }
-.hero-card h1 span:nth-child(2) { animation-delay: 0.8s; }
-.hero-card h1 span:nth-child(3) { animation-delay: 1.3s; }
-.hero-card h1 span:nth-child(4) { animation-delay: 1.8s; }
+            15% {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
 
-@keyframes fadeInWord {
-    0% { opacity: 0; transform: translateY(20px); }
-    100% { opacity: 1; transform: translateY(0); }
-}
+            85% {
+                opacity: 1;
+            }
 
-/* Paragraph fade in */
-.hero-card p {
-    font-size: clamp(1.2rem, 2.5vw, 1.5rem);
-    margin-bottom: 2rem;
-    text-shadow: 1px 1px 6px rgba(0,0,0,0.4);
-    opacity: 0;
-    animation: fadeInText 1s forwards;
-    animation-delay: 2.5s;
-}
+            100% {
+                transform: translateY(-30px);
+                opacity: 0;
+            }
+        }
 
-@keyframes fadeInText {
-    0% { opacity: 0; transform: translateY(10px);}
-    100% { opacity: 1; transform: translateY(0);}
-}
+        .navbar {
+            position: fixed;
+            top: 1.2rem;
+            left: 5%;
+            z-index: 100;
+        }
 
-/* Button fade in */
-.hero-card a {
-    display: inline-block;
-    padding: 1rem 2.5rem;
-    font-size: clamp(1rem, 2.5vw, 1.3rem);
-    font-weight: 600;
-    background: rgba(255,255,255,0.15);
-    border-radius: 50px;
-    color: white;
-    text-decoration: none;
-    transition: all 0.3s ease;
-    box-shadow: 0 10px 30px rgba(14,165,233,0.4);
-    opacity: 0;
-    animation: fadeInText 1s forwards;
-    animation-delay: 3s;
-}
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            background: linear-gradient(to right, #fff, var(--blue-glow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
-.hero-card a:hover {
-    transform: translateY(-5px) scale(1.05);
-    box-shadow: 0 15px 40px rgba(14,165,233,0.6);
-    background: rgba(255,255,255,0.25);
-}
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            pointer-events: none;
+        }
 
-/* Floating bubbles */
-.particles {
-    position: absolute;
-    top:0; left:0;
-    width:100%;
-    height:100%;
-    pointer-events:none;
-    z-index:1;
-}
+        .curate-card {
+            text-align: center;
+            padding: 3rem 4rem;
+            background: rgba(1, 4, 16, 0.85);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(14, 165, 233, 0.2);
+            border-radius: 20px;
+            max-width: 400px;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+            pointer-events: auto;
+        }
 
-.particle {
-    position: absolute;
-    background: rgba(255,255,255,0.1);
-    border-radius: 50%;
-    animation: float 8s infinite linear;
-}
+        h1 {
+            color: var(--white);
+            font-size: 1.4rem;
+            font-weight: 400;
+            margin-bottom: 2rem;
+            line-height: 1.2;
+            letter-spacing: 0.5px;
+        }
 
-.particle:nth-child(1) { width: 12px; height: 12px; top: 20%; left: 5%; animation-delay: 0s; }
-.particle:nth-child(2) { width: 18px; height: 18px; top: 70%; right: 10%; animation-delay: 2s; }
-.particle:nth-child(3) { width: 10px; height: 10px; bottom: 20%; left: 80%; animation-delay: 4s; }
-.particle:nth-child(4) { width: 14px; height: 14px; top: 40%; right: 25%; animation-delay: 1.5s; }
+        h1 span {
+            display: block;
+            font-weight: 900;
+            font-size: 2.2rem;
+            background: linear-gradient(to bottom, #fff, var(--light-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-top: 5px;
+        }
 
-@keyframes float {
-    0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-    10% { opacity: 1; }
-    90% { opacity: 1; }
-    100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
-}
+        .get-started {
+            display: inline-block;
+            padding: 0.9rem 2.5rem;
+            background: var(--white);
+            color: var(--bg);
+            text-decoration: none;
+            font-weight: 900;
+            font-size: 0.9rem;
+            border-radius: 100px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+        }
 
-@media (max-width:768px){
-    .hero-card { padding:2rem 1.5rem; }
-    .hero-card h1 { font-size: clamp(1.8rem,5vw,2.5rem); }
-}
-</style>
+        .get-started:hover {
+            transform: scale(1.05) translateY(-2px);
+            background: var(--blue-glow);
+            color: #fff;
+        }
+    </style>
 </head>
+
 <body>
-<div class="logo">
-    Learnodys
-</div>
+    <div class="grid-bg"></div>
+    <canvas id="connectionCanvas"></canvas>
 
-<section class="hero">
-    <div class="particles">
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
+    <nav class="navbar">
+        <div class="logo">LearnOdys</div>
+    </nav>
+
+    <div class="bubble-container" id="subjects"></div>
+
+    <div class="overlay">
+        <div class="curate-card">
+            <h1>Curate Your <br><span>Learning Journey</span></h1>
+            <a href="home.html" class="get-started">Get Started</a>
+        </div>
     </div>
 
-    <div class="hero-card">
-        <h1>
-            <span>Curate</span> 
-            <span>Your</span> 
-            <span>Learning</span> 
-            <span>Journey</span>
-        </h1>
-        <p>Discover personalized courses tailored just for you</p>
-       <a href="home.html">Get Started</a>
+    <script>
+        const topics = ["PYTHON", "JAVASCRIPT", "AI", "REACT", "DATA SCIENCE", "CLOUD", "JAVA", "DEVOPS", "SECURITY", "UI/UX"];
+        const field = document.getElementById('subjects');
+        const canvas = document.getElementById('connectionCanvas');
+        const ctx = canvas.getContext('2d');
 
-    </div>
-</section>
+        let activeBubbles = [];
+        let time = 0;
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function createPop() {
+            const el = document.createElement('div');
+            el.className = 'subject-pop';
+            el.innerText = topics[Math.floor(Math.random() * topics.length)];
+
+            const xvw = 5 + Math.random() * 85;
+            const yvh = 5 + Math.random() * 85;
+            el.style.left = xvw + 'vw';
+            el.style.top = yvh + 'vh';
+
+            field.appendChild(el);
+
+            const bubbleObj = {
+                el,
+                x: (xvw / 100) * window.innerWidth,
+                y: (yvh / 100) * window.innerHeight,
+                createdAt: Date.now()
+            };
+            activeBubbles.push(bubbleObj);
+
+            setTimeout(() => {
+                el.remove();
+                activeBubbles = activeBubbles.filter(b => b !== bubbleObj);
+                createPop();
+            }, 6000);
+        }
+
+        function drawConnections() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            time += 0.02;
+
+            for (let i = 0; i < activeBubbles.length; i++) {
+                for (let j = i + 1; j < activeBubbles.length; j++) {
+                    const b1 = activeBubbles[i];
+                    const b2 = activeBubbles[j];
+                    const dx = b1.x - b2.x;
+                    const dy = b1.y - b2.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < 350) {
+                        const opacity = (1 - dist / 350) * 0.4;
+
+                        // Draw Main Line with Glow
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = 'rgba(14, 165, 233, 0.5)';
+                        ctx.strokeStyle = `rgba(14, 165, 233, ${opacity})`;
+                        ctx.lineWidth = 1.5;
+                        ctx.beginPath();
+                        ctx.moveTo(b1.x, b1.y);
+                        ctx.lineTo(b2.x, b2.y);
+                        ctx.stroke();
+                        ctx.shadowBlur = 0;
+
+                        // Pulsing Data Dot
+                        const dotPos = (time + (i + j)) % 1;
+                        const dotX = b1.x + (b2.x - b1.x) * dotPos;
+                        const dotY = b1.y + (b2.y - b1.y) * dotPos;
+
+                        ctx.fillStyle = `rgba(125, 211, 252, ${opacity * 1.5})`;
+                        ctx.beginPath();
+                        ctx.arc(dotX, dotY, 2.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+            requestAnimationFrame(drawConnections);
+        }
+
+        for (let i = 0; i < 14; i++) {
+            setTimeout(createPop, i * 600);
+        }
+        drawConnections();
+    </script>
 </body>
+
 </html>

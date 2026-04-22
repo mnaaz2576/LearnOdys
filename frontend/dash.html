@@ -21,13 +21,47 @@ body{
   border-bottom:1px solid #ddd;
 }
 
-.logo{ font-weight:600; }
+.logo{ font-weight:600; font-size: 20px; color: #1e293b; }
 
-.search{
-  width:400px;
-  padding:10px;
-  border-radius:25px;
-  border:1px solid #ddd;
+/* 🔍 NAV SEARCH BOX (Matching courses.html) */
+.search-box-nav {
+    display: flex;
+    align-items: center;
+    background: #f5f7fb;
+    padding: 4px 10px;
+    border-radius: 30px;
+    border: 2px solid #dcdcdc;
+    transition: border-color 0.2s;
+}
+.search-box-nav:hover {
+    border-color: #2563eb;
+}
+.search-icon {
+    font-size: 16px;
+    margin-right: 6px;
+}
+.search-box-nav input {
+    border: none;
+    outline: none;
+    padding: 8px;
+    font-size: 14px;
+    width: 280px;
+    background: transparent;
+    font-family: inherit;
+}
+.search-box-nav button {
+    padding: 7px 16px;
+    border-radius: 20px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    margin-left: 8px;
+    transition: background 0.2s;
+}
+.search-box-nav button:hover {
+    background: #1d4ed8;
 }
 
 .profile-section{
@@ -59,10 +93,10 @@ body{
   text-align:center;
 }
 
-.avatar{
+.avatar, .avatar-mini{
   width:80px;
   height:80px;
-  background:#ff4d7d;
+  background:linear-gradient(135deg, #ff4d7d, #ff8c42);
   border-radius:50%;
   display:flex;
   align-items:center;
@@ -70,6 +104,14 @@ body{
   color:white;
   font-size:30px;
   margin:auto;
+  box-shadow: 0 4px 10px rgba(255,77,125,0.3);
+}
+
+.avatar-mini {
+  width: 35px;
+  height: 35px;
+  font-size: 16px;
+  box-shadow: 0 2px 5px rgba(255,77,125,0.2);
 }
 
 .right{ flex:1; }
@@ -275,19 +317,29 @@ body{
 
 <div class="navbar">
   <div class="logo">LearnOdys</div>
-  <input class="search" placeholder="Search courses...">
-  <div class="profile-section">
-    <span id="username"></span>
-    <button class="btn" onclick="logout()">Logout</button>
+  
+  <div class="nav-right" style="display:flex; align-items:center; gap:20px;">
+    <div class="search-box-nav">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="dashSearch" placeholder="Search courses..." onkeypress="handleDashSearch(event)">
+      <button onclick="navSearchDash()">Search</button>
+    </div>
+
+    <div class="profile-section">
+      <div id="profileLetterNav" class="avatar-mini" onclick="toggleMenu()" style="cursor:pointer; width:35px; height:35px; font-size:16px; margin:0;">S</div>
+      <span id="username"></span>
+      <button class="btn" onclick="logout()">Logout</button>
+    </div>
   </div>
 </div>
 
 <div class="container">
 
   <div class="left">
-    <div class="avatar">S</div>
+    <div class="avatar" id="mainAvatar">S</div>
     <h3 id="usernameLeft"></h3>
-    <button class="btn" onclick="showEdit()">Edit profile</button>
+    <button class="btn" onclick="showEdit()" style="width:100%; margin-bottom:10px;">Edit profile</button>
+    <a href="courses.html" class="btn" style="display:block; text-decoration:none; background:#f0f7ff; color:#2563eb; border:1px solid #bfdbfe; font-weight:600; margin-top:15px; padding:10px;">Explore All Courses</a>
 
     <div id="editBox" style="display:none; margin-top:10px;">
       <input type="text" id="editInput" placeholder="Enter name" style="padding:8px; width:90%;"><br><br>
@@ -353,10 +405,25 @@ body{
 
 <script>
 const userEmail = localStorage.getItem("userEmail") || "";
-const user = localStorage.getItem("userName") || userEmail || "User";
+const userName = localStorage.getItem("userName") || userEmail || "User";
+const firstLetter = userName.charAt(0).toUpperCase();
 const storageKey = `courses_${(userEmail || "guest").toLowerCase()}`;
-document.getElementById("username").innerText = "👤 " + user;
-document.getElementById("usernameLeft").innerText = user;
+
+document.getElementById("username").innerText = userName;
+document.getElementById("usernameLeft").innerText = userName;
+document.getElementById("mainAvatar").innerText = firstLetter;
+document.getElementById("profileLetterNav").innerText = firstLetter;
+
+function handleDashSearch(e) {
+  if (e.key === "Enter") {
+    navSearchDash();
+  }
+}
+
+function navSearchDash() {
+  const val = document.getElementById("dashSearch").value.trim();
+  if (val) window.location.href = `courses.html?search=${encodeURIComponent(val)}`;
+}
 
 let currentFilter = "all";
 let dashboardCourseCache = [];
@@ -824,6 +891,11 @@ function renderDailyQuizWidget(courses) {
     localStorage.setItem(getTodayQuizKey(), JSON.stringify(todayQuizState));
   }
 
+  if (todayQuizState.submitted) {
+    container.innerHTML = `<div style="padding:12px; background:#ecfdf5; border:1px solid #bbf7d0; border-radius:10px; color:#166534;"><strong>Daily quiz complete</strong><br>You've finished your practice for today! See you tomorrow 🚀</div>`;
+    return;
+  }
+
   container.innerHTML = `
     <div style="padding:12px; background:#f8fafc; border:1px solid #dbe4f0; border-radius:10px;">
       <strong>📅 Daily quiz</strong><br>
@@ -877,6 +949,14 @@ async function submitDailyCourseQuiz() {
   } catch (err) {
     console.error("Error saving daily quiz status:", err);
   }
+
+  // Mark as submitted locally to prevent re-attempts
+  todayQuizState.submitted = true;
+  todayQuizState.userScore = matchedCourse.lastQuizScore;
+  localStorage.setItem(getTodayQuizKey(), JSON.stringify(todayQuizState));
+  
+  // Refresh UI to show submitted state
+  renderDailyQuizWidget(dashboardCourseCache);
 }
 
 function filterCourses(type){
@@ -904,7 +984,8 @@ async function addCourse(){
     reminderFrequency: "daily",
     reminderTime: "19:00",
     lastReminderDate: "",
-    lastQuizDate: ""
+    lastQuizDate: "",
+    savedAt: new Date().toISOString()
   };
   courses.push(coursePayload);
   setSavedCourses(courses);
@@ -1000,6 +1081,11 @@ function logout(){
   window.location.href = "index.html";
 }
 
+function toggleMenu(){
+  const menu = document.getElementById("menu");
+  if (menu) menu.style.display = (menu.style.display === "block") ? "none" : "block";
+}
+
 function showTab(tab){
   document.getElementById("profileTab").classList.add("hidden");
   document.getElementById("listTab").classList.add("hidden");
@@ -1091,7 +1177,14 @@ function renderPlanSections(containerId, title, sections) {
         ${sections.map(section => `
           <div style="background:#fff; border:1px solid #dbe4f0; border-radius:8px; padding:10px;">
             <div style="font-weight:600; color:#0f172a; margin-bottom:4px;">${escapeHtml(section.heading)}</div>
-            <div style="color:#475569; line-height:1.5;">${escapeHtml(section.text)}</div>
+            <div style="color:#475569; line-height:1.5; white-space: pre-line;">${escapeHtml(section.text)}</div>
+            ${section.resource ? `
+              <div style="margin-top:8px;">
+                <a href="${section.resource}" target="_blank" style="display:inline-flex; align-items:center; gap:5px; text-decoration:none; color:#2563eb; font-size:13px; font-weight:600; background:#eff6ff; padding:5px 12px; border-radius:15px; border:1px solid #bfdbfe; transition:all 0.2s;">
+                  <span>🔗</span> Explore Resource
+                </a>
+              </div>
+            ` : ""}
           </div>
         `).join("")}
       </div>
@@ -1107,7 +1200,8 @@ function fallbackRoadmapSections(courses) {
   return [
     { heading: "Focus now", text: `Revise ${weakest?.title || "your weakest topic"} first and raise it above 70%.` },
     { heading: "This week", text: "Spend 20-30 minutes daily on one concept, one example, and one practice task." },
-    { heading: "Next step", text: `Once comfortable, move into ${strongest?.title || "your next stronger topic"} with one mini project.` }
+    { heading: "Next step", text: `Once comfortable, move into ${strongest?.title || "your next stronger topic"} with one mini project.` },
+    { heading: "Useful Resources", text: "• Official Documentation\n• MDN Web Docs\n• FreeCodeCamp YouTube" }
   ];
 }
 
@@ -1372,11 +1466,11 @@ document.getElementById('genRoadmapBtn').addEventListener('click', async () => {
   roadmapOutput.innerHTML = `<div style="color:#1d4ed8;">Building a short action plan for your next steps...</div>`;
 
   try {
-    const prompt = `Create a very practical roadmap for this learner based on saved courses and completion levels:\n${skills}\n\nReturn ONLY valid JSON in this format:\n{\n  "title": "string",\n  "sections": [\n    { "heading": "Focus now", "text": "short action" },\n    { "heading": "This week", "text": "short action" },\n    { "heading": "Next milestone", "text": "short action" }\n  ]\n}\n\nKeep it short, actionable, and encouraging. No long explanations.`;
+    const prompt = `Create a very practical roadmap for this learner based on saved courses and completion levels:\n${skills}\n\nReturn ONLY valid JSON in this format:\n{\n  "title": "string",\n  "sections": [\n    { "heading": "Focus now", "text": "short action" },\n    { "heading": "This week", "text": "short action" },\n    { "heading": "Next milestone", "text": "short action" },\n    { "heading": "Useful Resources", "text": "list 3 specific resources (books, links, or channels)" }\n  ]\n}\n\nKeep it short, actionable, and encouraging. No long explanations.`;
     const result = await askGemini(prompt);
     const parsed = parseAiJsonResponse(result);
     const sections = Array.isArray(parsed?.sections) && parsed.sections.length
-      ? parsed.sections.map(section => ({ heading: section.heading || "Step", text: section.text || "Keep practicing consistently." })).slice(0, 3)
+      ? parsed.sections.map(section => ({ heading: section.heading || "Step", text: section.text || "Keep practicing consistently." })).slice(0, 4)
       : fallbackRoadmapSections(userCourses);
     renderPlanSections('roadmapOutput', parsed?.title || 'Your quick roadmap', sections);
   } catch (err) {
@@ -1394,11 +1488,15 @@ document.getElementById('genProjectBtn').addEventListener('click', async () => {
   projectsOutput.innerHTML = `<div style="color:#1d4ed8;">Finding project ideas you can actually build next...</div>`;
 
   try {
-    const prompt = `Suggest 3 useful projects for this learner based on saved courses and completion levels:\n${courses}\n\nReturn ONLY valid JSON in this format:\n{\n  "title": "string",\n  "sections": [\n    { "heading": "Project 1", "text": "one short idea with what to build first" },\n    { "heading": "Project 2", "text": "one short idea with what to build first" },\n    { "heading": "Project 3", "text": "one short idea with what to build first" }\n  ]\n}\n\nKeep each idea short, practical, and suited to their current confidence.`;
+    const prompt = `Suggest 3 useful projects for this learner based on saved courses and completion levels:\n${courses}\n\nReturn ONLY valid JSON in this format:\n{\n  "title": "string",\n  "sections": [\n    { "heading": "Project 1", "text": "one short idea with what to build first", "resource": "URL to helpful resource or docs" },\n    { "heading": "Project 2", "text": "one short idea with what to build first", "resource": "URL to helpful resource or docs" },\n    { "heading": "Project 3", "text": "one short idea with what to build first", "resource": "URL to helpful resource or docs" }\n  ]\n}\n\nKeep each idea short, practical, and suited to their current confidence. Provide a REAL, clickable URL for each resource (like MDN, Official Docs, or a YouTube tutorial).`;
     const result = await askGemini(prompt);
     const parsed = parseAiJsonResponse(result);
     const sections = Array.isArray(parsed?.sections) && parsed.sections.length
-      ? parsed.sections.map(section => ({ heading: section.heading || "Project", text: section.text || "Build a small practice project." })).slice(0, 3)
+      ? parsed.sections.map(section => ({ 
+          heading: section.heading || "Project", 
+          text: section.text || "Build a small practice project.",
+          resource: section.resource || "" 
+        })).slice(0, 3)
       : fallbackProjectSections(userCourses);
     renderPlanSections('projectsOutput', parsed?.title || 'Project ideas for you', sections);
   } catch (err) {

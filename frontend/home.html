@@ -26,23 +26,19 @@
 <a href="signup.html" id="signupBtn">Sign Up</a>
 
 <!-- PROFILE -->
-<div id="profileSection" style="display:none; position:relative;">
-
-  <div onclick="toggleMenu()" style="cursor:pointer; font-size:20px;">
-    👤
+<div id="profileSection" style="display:none; align-items:center; gap:15px; position:relative;">
+  
+  <div id="profileLetter" onclick="toggleMenu()" class="avatar-mini" style="cursor:pointer; width:35px; height:35px; font-size:16px; display:flex; align-items:center; justify-content:center; background:#ff4d7d; color:white; border-radius:50%; font-weight:600;">
+    U
   </div>
 
-  <div id="menu" style="display:none; position:absolute; right:0; top:30px; background:white; padding:10px; box-shadow:0 0 10px rgba(0,0,0,0.2);">
-
-    <p id="profileName"></p>
-
-    <a href="dash.html">Dashboard</a><br>
-    <a href="list.html">My List</a><br>
-
-    <button onclick="logout()">Logout</button>
-
+  <div id="menu" style="display:none; position:absolute; right:0; top:45px; background:white; padding:15px; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.1); min-width:150px; z-index:100;">
+    <p id="profileName" style="margin:0 0 10px 0; font-weight:600; font-size:14px; color:#1e293b;"></p>
+    <hr style="border:0; border-top:1px solid #f1f5f9; margin-bottom:10px;">
+    <a href="dash.html" style="text-decoration:none; color:#475569; display:block; margin-bottom:8px; font-size:14px;">Dashboard</a>
+    <a href="list.html" style="text-decoration:none; color:#475569; display:block; margin-bottom:8px; font-size:14px;">My List</a>
+    <button onclick="logout()" style="width:100%; padding:8px; background:#fef2f2; color:#ef4444; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:13px; margin-top:5px;">Logout</button>
   </div>
-
 </div>
 
 </div>

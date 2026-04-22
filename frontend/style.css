@@ -1734,4 +1734,105 @@ body {
     font-size: 13px;
 }
 
+/* ── Mobile Responsiveness ── */
+@media screen and (max-width: 768px) {
+    .hero-asymmetric {
+        padding: 40px 15px;
+    }
+    
+    .hero-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .hero-text h1 {
+        font-size: 28px;
+    }
+
+    .ai-mentor-inline {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 20px 0;
+        border-radius: 16px;
+    }
+    
+    .advisor-output {
+        max-height: 350px;
+        min-height: 250px;
+    }
+    
+    .ai-bubble-body {
+        max-width: 90%;
+        font-size: 13px;
+        padding: 8px 12px;
+    }
+    
+    .ai-avatar-header {
+        width: 30px;
+        height: 30px;
+        font-size: 16px;
+    }
+    
+    .ai-widget-title {
+        font-size: 14px;
+    }
+
+    .advisor-controls {
+        padding: 8px 12px;
+    }
+    
+    .advisor-input-wrap input {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+    
+    .advisor-send-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    .course-ai-helper {
+        left: 10px;
+        right: 10px;
+        width: auto;
+        bottom: 74px;
+        max-height: calc(100vh - 100px);
+    }
+    
+    .advisor-fab {
+        left: 10px;
+        bottom: 10px;
+        padding: 10px 16px;
+    }
+}
+
+.clickable-course {
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.clickable-course:hover {
+    color: #3b82f6;
+    text-decoration: underline;
+}
+
+@media screen and (max-width: 480px) {
+    .ai-bubble-body {
+        max-width: 95%;
+    }
+    
+    .ai-avatar-header {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+    }
+    
+    .ai-widget-title {
+        font-size: 14px;
+    }
+    
+    .ai-quick-chips {
+        gap: 4px;
+    }
+}
 
